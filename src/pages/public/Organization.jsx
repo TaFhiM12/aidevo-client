@@ -25,7 +25,6 @@ import { AnimatePresence } from 'framer-motion';
 import ApplicationModal from '../../components/layouts/ApplicationModal';
 import useAuth from '../../hooks/useAuth';
 import useUserRole from '../../hooks/useUserRole';
-import Loading from '../../components/common/Loading';
 import API from '../../utils/api';
 import toast from 'react-hot-toast';
 
@@ -334,10 +333,6 @@ const Organization = () => {
     );
   };
 
-  if (loading) {
-    return <Loading/>
-  }
-
   const activeOrganizations = organizations.filter(
     (org) => String(org?.status || "").toLowerCase() === "active"
   ).length;
@@ -412,6 +407,32 @@ const Organization = () => {
             </div>
           )}
         </div>
+
+        {loading ? (
+          <div className="space-y-6">
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 animate-pulse">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {[1, 2, 3, 4].map((item) => (
+                  <div key={item} className="h-10 rounded-xl bg-gray-200" />
+                ))}
+              </div>
+              <div className="mt-4 h-9 w-64 rounded-xl bg-gray-200" />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3, 4, 5, 6].map((n) => (
+                <div key={n} className="app-surface p-6 animate-pulse min-h-[380px]">
+                  <div className="h-16 w-16 rounded-xl bg-gray-200 mb-4" />
+                  <div className="h-6 w-2/3 rounded bg-gray-200 mb-3" />
+                  <div className="h-4 w-1/2 rounded bg-gray-200 mb-2" />
+                  <div className="h-4 w-3/4 rounded bg-gray-200 mb-6" />
+                  <div className="h-10 w-full rounded-xl bg-gray-200" />
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <>
 
         {/* Error Message */}
         {error && (
@@ -671,6 +692,8 @@ const Organization = () => {
               }
             </p>
           </div>
+        )}
+          </>
         )}
       </div>
 

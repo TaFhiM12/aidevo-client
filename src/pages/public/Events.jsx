@@ -356,28 +356,6 @@ const Events = () => {
     </motion.div>
   );
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 pt-20 px-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/4 mb-8"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3, 4, 5, 6].map((n) => (
-                <div key={n} className="bg-white rounded-2xl shadow-lg p-6">
-                  <div className="h-48 bg-gray-200 rounded-xl mb-4"></div>
-                  <div className="h-6 bg-gray-200 rounded mb-3"></div>
-                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                  <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 pt-20 px-4 pb-12">
       <div className="max-w-7xl mx-auto">
@@ -399,6 +377,31 @@ const Events = () => {
             university community
           </p>
         </motion.div>
+
+        {loading ? (
+          <div className="space-y-8">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100 p-6 animate-pulse">
+              <div className="h-11 rounded-xl bg-gray-200 mb-4" />
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {[1, 2, 3, 4].map((item) => (
+                  <div key={item} className="h-10 rounded-lg bg-gray-200" />
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3, 4, 5, 6].map((n) => (
+                <div key={n} className="bg-white rounded-2xl shadow-lg p-6 animate-pulse">
+                  <div className="h-48 bg-gray-200 rounded-xl mb-4" />
+                  <div className="h-6 bg-gray-200 rounded mb-3" />
+                  <div className="h-4 bg-gray-200 rounded mb-2" />
+                  <div className="h-4 bg-gray-200 rounded w-2/3" />
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <>
 
         {/* Personalized Recommendations - Only for logged-in students */}
         {user && recommendationStudentId && (
@@ -663,6 +666,8 @@ const Events = () => {
             </div>
           )}
         </motion.div>
+          </>
+        )}
       </div>
     </div>
   );
