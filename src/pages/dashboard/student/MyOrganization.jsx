@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
 import {
   Building,
   MapPin,
@@ -19,31 +20,24 @@ import {
 import { Link } from "react-router";
 import useAuth from "../../../hooks/useAuth";
 import API from "../../../utils/api";
+import useInfiniteScrollSlice from "../../../hooks/useInfiniteScrollSlice";
+
+const MotionDiv = motion.div;
 
 const MyOrganization = () => {
   const { user } = useAuth();
 
-  const [organizations, setOrganizations] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (user?.email) {
-      fetchMyOrganizations();
-    } else {
-      setOrganizations([]);
-      setLoading(false);
-    }
-  }, [user]);
-
-  const fetchMyOrganizations = async () => {
-    try {
-      setLoading(true);
-      setError("");
-
+  const {
+    data: organizations = [],
+    isLoading: loading,
+    error,
+  } = useQuery({
+    queryKey: ['my-organizations', user?.email],
+    enabled: Boolean(user?.email),
+    queryFn: async () => {
       const userInfoResponse = await API.get(
         `/users/role/${encodeURIComponent(user.email)}`
       );
@@ -51,30 +45,19 @@ const MyOrganization = () => {
       const studentMongoId = userInfoResponse?.data?.studentId;
 
       if (!studentMongoId) {
-        throw new Error("Student ID not found");
+        return [];
       }
 
       const orgResponse = await API.get(
         `/students/${studentMongoId}/organizations`
       );
 
-      const orgData = Array.isArray(orgResponse.data) ? orgResponse.data : [];
+      return Array.isArray(orgResponse?.data) ? orgResponse.data : [];
+    },
+    staleTime: 1000 * 60 * 3,
+  });
 
-      setOrganizations(orgData);
-    } catch (error) {
-      console.error("Error fetching organizations:", error);
-      setError(
-        error?.response?.data?.message ||
-          error?.message ||
-          "Failed to load organizations"
-      );
-      setOrganizations([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filteredOrganizations = organizations.filter((org) => {
+  const filteredOrganizations = useMemo(() => organizations.filter((org) => {
     const orgInfo = org?.organizationInfo || {};
     const orgName = org?.organizationName || "";
     const orgEmail = org?.organizationEmail || "";
@@ -89,14 +72,23 @@ const MyOrganization = () => {
       selectedType === "all" || orgInfo.type === selectedType;
 
     return matchesSearch && matchesType;
+  }), [organizations, searchTerm, selectedType]);
+
+  const {
+    visibleItems: visibleOrganizations,
+    hasMore,
+    loadMoreRef,
+  } = useInfiniteScrollSlice(filteredOrganizations, {
+    pageSize: 6,
+    resetDeps: [searchTerm, selectedType, filteredOrganizations.length],
   });
 
-  const organizationTypes = [
+  const organizationTypes = useMemo(() => [
     "all",
     ...new Set(
       organizations.map((org) => org?.organizationInfo?.type).filter(Boolean)
     ),
-  ];
+  ], [organizations]);
 
   const formatDate = (dateString) => {
     try {
@@ -149,7 +141,7 @@ const MyOrganization = () => {
     const orgId = org?.organizationId;
 
     return (
-      <motion.div
+      <MotionDiv
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         whileHover={{ y: -5 }}
@@ -264,7 +256,7 @@ const MyOrganization = () => {
             )}
           </div>
         </div>
-      </motion.div>
+      </MotionDiv>
     );
   };
 
@@ -296,11 +288,11 @@ const MyOrganization = () => {
         {error && (
           <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 flex items-center gap-2">
             <AlertCircle className="w-5 h-5" />
-            {error}
+            {String(error || "Failed to load organizations")}
           </div>
         )}
 
-        <motion.div
+        <MotionDiv
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
@@ -336,7 +328,7 @@ const MyOrganization = () => {
 
           <AnimatePresence>
             {showFilters && (
-              <motion.div
+              <MotionDiv
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
@@ -373,12 +365,12 @@ const MyOrganization = () => {
                     </button>
                   </div>
                 </div>
-              </motion.div>
+              </MotionDiv>
             )}
           </AnimatePresence>
-        </motion.div>
+        </MotionDiv>
 
-        <motion.div
+        <MotionDiv
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
@@ -395,7 +387,7 @@ const MyOrganization = () => {
           </div>
 
           {filteredOrganizations.length === 0 ? (
-            <motion.div
+            <MotionDiv
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               className="text-center py-16 bg-white/50 rounded-2xl border-2 border-dashed border-gray-200"
@@ -420,24 +412,30 @@ const MyOrganization = () => {
                 <Heart className="w-4 h-4" />
                 Browse Organizations
               </Link>
-            </motion.div>
+            </MotionDiv>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <AnimatePresence>
-                {filteredOrganizations.map((org, index) => (
-                  <motion.div
+                {visibleOrganizations.map((org, index) => (
+                  <MotionDiv
                     key={org._id || org.organizationId || index}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
                   >
                     <OrganizationCard org={org} />
-                  </motion.div>
+                  </MotionDiv>
                 ))}
               </AnimatePresence>
             </div>
           )}
-        </motion.div>
+
+          {hasMore && filteredOrganizations.length > 0 && (
+            <div ref={loadMoreRef} className="py-6 text-center text-sm text-gray-500">
+              Loading more organizations...
+            </div>
+          )}
+        </MotionDiv>
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Search,
   Filter,
@@ -16,15 +17,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import useAuth from "../../../hooks/useAuth";
 import Loading from "../../../components/common/Loading";
 import API from "../../../utils/api";
+import useInfiniteScrollSlice from "../../../hooks/useInfiniteScrollSlice";
+
+const MotionDiv = motion.div;
+const MotionButton = motion.button;
 
 const MyApplications = () => {
   const { user } = useAuth();
-  const [applications, setApplications] = useState([]);
-  const [filteredApplications, setFilteredApplications] = useState([]);
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [selectedApplication, setSelectedApplication] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
 
@@ -35,39 +36,21 @@ const MyApplications = () => {
     { value: 'rejected', label: 'Rejected', color: 'red', icon: XCircle },
   ];
 
- useEffect(() => {
-  if (user?.uid) {
-    fetchApplications();
-  }
-}, [user]);
+  const {
+    data: applications = [],
+    isLoading: loading,
+    error,
+  } = useQuery({
+    queryKey: ['student-applications', user?.uid],
+    enabled: Boolean(user?.uid),
+    queryFn: async () => {
+      const response = await API.get(`/students/${user.uid}/applications`);
+      return Array.isArray(response?.data) ? response.data : [];
+    },
+    staleTime: 1000 * 60 * 2,
+  });
 
-useEffect(() => {
-  filterApplications();
-}, [applications, searchTerm, selectedStatus]);
-
-const fetchApplications = async () => {
-  try {
-    setLoading(true);
-    setError("");
-
-    if (!user?.uid) {
-      setApplications([]);
-      return;
-    }
-
-    const response = await API.get(`/students/${user.uid}/applications`);
-    const applicationsData = Array.isArray(response.data) ? response.data : [];
-    setApplications(applicationsData);
-  } catch (error) {
-    console.error("Error fetching applications:", error);
-    setError("Failed to load applications. Please try again.");
-    setApplications([]);
-  } finally {
-    setLoading(false);
-  }
-};
-
-  const filterApplications = () => {
+  const filteredApplications = useMemo(() => {
     let filtered = applications;
 
     // Search filter
@@ -86,8 +69,17 @@ const fetchApplications = async () => {
       filtered = filtered.filter((app) => app.status === selectedStatus);
     }
 
-    setFilteredApplications(filtered);
-  };
+    return filtered;
+  }, [applications, searchTerm, selectedStatus]);
+
+  const {
+    visibleItems: visibleApplications,
+    hasMore,
+    loadMoreRef,
+  } = useInfiniteScrollSlice(filteredApplications, {
+    pageSize: 9,
+    resetDeps: [searchTerm, selectedStatus, filteredApplications.length],
+  });
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -149,20 +141,20 @@ const fetchApplications = async () => {
         
         {/* Error Message */}
         {error && (
-          <motion.div
+          <MotionDiv
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-xl mb-6"
           >
             <div className="flex items-center gap-3">
               <AlertCircle className="w-5 h-5" />
-              <span className="font-medium">{error}</span>
+              <span className="font-medium">{String(error || "Failed to load applications. Please try again.")}</span>
             </div>
-          </motion.div>
+          </MotionDiv>
         )}
 
         {/* Stats */}
-        <motion.div
+        <MotionDiv
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
@@ -191,10 +183,10 @@ const fetchApplications = async () => {
               </div>
             );
           })}
-        </motion.div>
+        </MotionDiv>
 
         {/* Search and Filters */}
-        <motion.div
+        <MotionDiv
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
@@ -229,23 +221,23 @@ const fetchApplications = async () => {
               </select>
             </div>
           </div>
-        </motion.div>
+        </MotionDiv>
 
         {/* Applications Grid */}
-        <motion.div
+        <MotionDiv
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         >
           <AnimatePresence>
-            {filteredApplications.map((application, index) => {
+            {visibleApplications.map((application, index) => {
               const StatusIcon = getStatusIcon(application.status);
               const organization = application.organization || {};
               const orgDetails = organization.organization || {};
 
               return (
-                <motion.div
+                <MotionDiv
                   key={application._id}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -318,7 +310,7 @@ const fetchApplications = async () => {
 
                   {/* Actions */}
                   <div className="p-4 bg-gray-50 border-t border-gray-100">
-                    <motion.button
+                    <MotionButton
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => {
@@ -329,17 +321,23 @@ const fetchApplications = async () => {
                     >
                       <Eye className="w-4 h-4" />
                       View Details
-                    </motion.button>
+                    </MotionButton>
                   </div>
-                </motion.div>
+                </MotionDiv>
               );
             })}
           </AnimatePresence>
-        </motion.div>
+        </MotionDiv>
+
+        {hasMore && filteredApplications.length > 0 && (
+          <div ref={loadMoreRef} className="py-6 text-center text-sm text-gray-500">
+            Loading more applications...
+          </div>
+        )}
 
         {/* Empty State */}
         {filteredApplications.length === 0 && !loading && (
-          <motion.div
+          <MotionDiv
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="text-center py-12"
@@ -355,16 +353,16 @@ const fetchApplications = async () => {
               }
             </p>
             {applications.length === 0 && (
-              <motion.button
+              <MotionButton
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => window.location.href = '/organization'}
                 className="app-btn-primary px-6 py-3"
               >
                 Browse Organizations
-              </motion.button>
+              </MotionButton>
             )}
-          </motion.div>
+          </MotionDiv>
         )}
       </div>
 
@@ -390,13 +388,13 @@ const ApplicationDetailsModal = ({ application, onClose }) => {
   const orgDetails = organization.organization || {};
 
   return (
-    <motion.div
+    <MotionDiv
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
     >
-      <motion.div
+      <MotionDiv
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
@@ -597,8 +595,8 @@ const ApplicationDetailsModal = ({ application, onClose }) => {
             Close
           </button>
         </div>
-      </motion.div>
-    </motion.div>
+      </MotionDiv>
+    </MotionDiv>
   );
 };
 

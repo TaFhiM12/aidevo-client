@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
 import {
   Calendar,
@@ -16,67 +17,56 @@ import {
 import useAuth from "../../../hooks/useAuth";
 import API from "../../../utils/api";
 import Loading from "../../../components/common/Loading";
+import useInfiniteScrollSlice from "../../../hooks/useInfiniteScrollSlice";
 
 const MyEnrolledEvents = () => {
   const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("upcoming");
-  const [items, setItems] = useState([]);
-  const [payments, setPayments] = useState([]);
+  const {
+    data,
+    isLoading: loading,
+    error,
+  } = useQuery({
+    queryKey: ['student-enrolled-events', user?.uid],
+    enabled: Boolean(user?.uid),
+    queryFn: async () => {
+      const [participationsRes, paymentRes] = await Promise.all([
+        API.get(`/events/student/${user.uid}/participations`),
+        API.get(`/payments/student/${user.uid}`),
+      ]);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!user?.uid) {
-        setItems([]);
-        setLoading(false);
-        return;
-      }
+      const participations = Array.isArray(participationsRes?.data)
+        ? participationsRes.data
+        : [];
+      const paymentList = Array.isArray(paymentRes?.data) ? paymentRes.data : [];
 
-      try {
-        setLoading(true);
-        setError("");
+      const mapped = participations.map((participation) => ({
+        key: participation._id,
+        participationId: participation._id,
+        joinedAt: participation.joinedAt,
+        organizationName: participation.organizationName || "",
+        event: {
+          _id: String(participation.eventId || ""),
+          title: participation.eventTitle || "Untitled Event",
+          startAt: participation.eventStartAt,
+          endAt: participation.eventEndAt,
+          location: participation.eventLocation || "TBA",
+          fee: Number(participation.eventFee || 0),
+          cover: participation.eventCover || "",
+        },
+      }));
 
-        const [participationsRes, paymentRes] = await Promise.all([
-          API.get(`/events/student/${user.uid}/participations`),
-          API.get(`/payments/student/${user.uid}`),
-        ]);
+      return {
+        items: mapped,
+        payments: paymentList,
+      };
+    },
+    staleTime: 1000 * 60 * 2,
+  });
 
-        const participations = Array.isArray(participationsRes?.data)
-          ? participationsRes.data
-          : [];
-        const paymentList = Array.isArray(paymentRes?.data) ? paymentRes.data : [];
-
-        const mapped = participations.map((participation) => ({
-          key: participation._id,
-          participationId: participation._id,
-          joinedAt: participation.joinedAt,
-          organizationName: participation.organizationName || "",
-          event: {
-            _id: String(participation.eventId || ""),
-            title: participation.eventTitle || "Untitled Event",
-            startAt: participation.eventStartAt,
-            endAt: participation.eventEndAt,
-            location: participation.eventLocation || "TBA",
-            fee: Number(participation.eventFee || 0),
-            cover: participation.eventCover || "",
-          },
-        }));
-
-        setItems(mapped);
-        setPayments(paymentList);
-      } catch (err) {
-        setError(typeof err === "string" ? err : "Failed to load your events.");
-        setItems([]);
-        setPayments([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [user?.uid]);
+  const items = data?.items || [];
+  const payments = data?.payments || [];
 
   const getEventPhase = (event) => {
     const now = Date.now();
@@ -111,6 +101,15 @@ const MyEnrolledEvents = () => {
   const filteredList = (listByTab[activeTab] || []).filter((item) => {
     const hay = `${item.event?.title || ""} ${item.organizationName || ""} ${item.event?.location || ""}`.toLowerCase();
     return hay.includes(searchTerm.toLowerCase());
+  });
+
+  const {
+    visibleItems: visibleEvents,
+    hasMore,
+    loadMoreRef,
+  } = useInfiniteScrollSlice(filteredList, {
+    pageSize: 9,
+    resetDeps: [activeTab, searchTerm, filteredList.length],
   });
 
   const paymentByEventId = useMemo(() => {
@@ -208,7 +207,7 @@ const MyEnrolledEvents = () => {
         {error && (
           <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 flex items-center gap-2">
             <AlertCircle className="w-4 h-4" />
-            {error}
+            {String(error || "Failed to load your events.")}
           </div>
         )}
 
@@ -269,7 +268,7 @@ const MyEnrolledEvents = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-            {filteredList.map((item) => (
+            {visibleEvents.map((item) => (
               <div key={item.key} className="app-surface overflow-hidden">
                 {item.event?.cover ? (
                   <img
@@ -336,6 +335,12 @@ const MyEnrolledEvents = () => {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {hasMore && filteredList.length > 0 && (
+          <div ref={loadMoreRef} className="py-6 text-center text-sm text-slate-500">
+            Loading more events...
           </div>
         )}
       </div>
