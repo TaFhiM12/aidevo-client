@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 
 import {
@@ -24,6 +25,7 @@ import ClubEventDetails from "./shared/ClubEventDetails";
 import SocialServiceEventDetails from "./shared/SocialServiceEventDetails";
 import Loading from "../../../components/common/Loading";
 import API from "../../../utils/api";
+import useInfiniteScrollSlice from "../../../hooks/useInfiniteScrollSlice";
 
 const OrganizationEvents = () => {
   const { userInfo } = useUserRole();
@@ -45,31 +47,27 @@ const OrganizationEvents = () => {
   const [participantsError, setParticipantsError] = useState("");
   const [removingParticipantMap, setRemovingParticipantMap] = useState({});
 
+  const {
+    data: queriedEvents = [],
+    isLoading,
+  } = useQuery({
+    queryKey: ["organization-events", email],
+    enabled: Boolean(email),
+    queryFn: async () => {
+      const response = await API.get("/events");
+      const allEvents = Array.isArray(response?.data) ? response.data : [];
+      return allEvents.filter((event) => event.organizationEmail === email);
+    },
+    staleTime: 1000 * 60 * 2,
+  });
+
   useEffect(() => {
-    if (email) {
-      fetchOrganizationEvents();
-    }
-  }, [email]);
+    setLoading(isLoading);
+  }, [isLoading]);
 
-  const fetchOrganizationEvents = async () => {
-  try {
-    setLoading(true);
-
-    const response = await API.get("/events");
-    const allEvents = Array.isArray(response.data) ? response.data : [];
-
-    const orgEvents = allEvents.filter(
-      (event) => event.organizationEmail === email
-    );
-
-    setEvents(orgEvents);
-  } catch (error) {
-    console.error("Error fetching organization events:", error);
-    setEvents([]);
-  } finally {
-    setLoading(false);
-  }
-};
+  useEffect(() => {
+    setEvents(queriedEvents);
+  }, [queriedEvents]);
 
 const handleDeleteEvent = async (eventId) => {
   const eventTitle =
@@ -187,7 +185,7 @@ const handleRemoveParticipant = async (participantId) => {
   };
 
   // Filter events
-  const filteredEvents = events.filter((event) => {
+  const filteredEvents = useMemo(() => events.filter((event) => {
     const matchesSearch =
       event.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       event.shortDesc?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -195,6 +193,15 @@ const handleRemoveParticipant = async (participantId) => {
       selectedStatus === "all" || event.status === selectedStatus;
 
     return matchesSearch && matchesStatus;
+  }), [events, searchTerm, selectedStatus]);
+
+  const {
+    visibleItems: visibleEvents,
+    hasMore,
+    loadMoreRef,
+  } = useInfiniteScrollSlice(filteredEvents, {
+    pageSize: 9,
+    resetDeps: [searchTerm, selectedStatus, filteredEvents.length],
   });
 
   const formatDate = (dateString) => {
@@ -522,7 +529,7 @@ const handleRemoveParticipant = async (participantId) => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <AnimatePresence>
-                {filteredEvents.map((event, index) => (
+                {visibleEvents.map((event, index) => (
                   <motion.div
                     key={event._id}
                     initial={{ opacity: 0, y: 20 }}
@@ -534,6 +541,12 @@ const handleRemoveParticipant = async (participantId) => {
                   </motion.div>
                 ))}
               </AnimatePresence>
+            </div>
+          )}
+
+          {hasMore && filteredEvents.length > 0 && (
+            <div ref={loadMoreRef} className="py-6 text-center text-sm text-gray-500">
+              Loading more events...
             </div>
           )}
         </motion.div>

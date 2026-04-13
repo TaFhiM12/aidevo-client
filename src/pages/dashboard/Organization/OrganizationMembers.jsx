@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
     Search,
     Users,
@@ -12,46 +13,34 @@ import API from "../../../utils/api";
 import useUserRole from "../../../hooks/useUserRole";
 import Loading from "../../../components/common/Loading";
 import toast from "react-hot-toast";
+import useInfiniteScrollSlice from "../../../hooks/useInfiniteScrollSlice";
 
 const OrganizationMembers = () => {
     const { userInfo, loading: roleLoading } = useUserRole();
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
-    const [members, setMembers] = useState([]);
-    const [organizationName, setOrganizationName] = useState("");
+    const {
+        data,
+        isLoading: loading,
+        error,
+    } = useQuery({
+        queryKey: ["organization-members", userInfo?.email],
+        enabled: Boolean(userInfo?.email),
+        queryFn: async () => {
+            const response = await API.get(
+                `/organizations/email/${encodeURIComponent(userInfo.email)}/members`
+            );
+            const payload = response?.data || {};
+            return {
+                members: Array.isArray(payload?.members) ? payload.members : [],
+                organizationName:
+                    payload?.organization?.name || userInfo?.organizationName || "Organization",
+            };
+        },
+        staleTime: 1000 * 60 * 3,
+    });
 
-    useEffect(() => {
-        const fetchMembers = async () => {
-            if (!userInfo?.email) {
-                setMembers([]);
-                setLoading(false);
-                return;
-            }
-
-            try {
-                setLoading(true);
-                setError("");
-
-                const response = await API.get(
-                    `/organizations/email/${encodeURIComponent(userInfo.email)}/members`
-                );
-
-                const payload = response?.data || {};
-                const list = Array.isArray(payload?.members) ? payload.members : [];
-
-                setMembers(list);
-                setOrganizationName(payload?.organization?.name || userInfo?.organizationName || "Organization");
-            } catch (err) {
-                setMembers([]);
-                setError(typeof err === "string" ? err : "Failed to load organization members");
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchMembers();
-    }, [userInfo?.email, userInfo?.organizationName]);
+    const members = data?.members || [];
+    const organizationName = data?.organizationName || userInfo?.organizationName || "Organization";
 
     const formatDate = (value) => {
         if (!value) return "N/A";
@@ -71,6 +60,15 @@ const OrganizationMembers = () => {
             return haystack.includes(query);
         });
     }, [members, searchTerm]);
+
+    const {
+        visibleItems: visibleMembers,
+        hasMore,
+        loadMoreRef,
+    } = useInfiniteScrollSlice(filteredMembers, {
+        pageSize: 20,
+        resetDeps: [searchTerm, filteredMembers.length],
+    });
 
     const activeMembers = useMemo(
         () => members.filter((member) => member.status === "active").length,
@@ -171,7 +169,7 @@ const OrganizationMembers = () => {
             {error && (
                 <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 flex items-center gap-2">
                     <AlertCircle className="w-4 h-4" />
-                    {error}
+                    {String(error || "Failed to load organization members")}
                 </div>
             )}
 
@@ -220,7 +218,7 @@ const OrganizationMembers = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredMembers.map((member) => (
+                                {visibleMembers.map((member) => (
                                     <tr key={member._id} className="border-b border-slate-100 last:border-b-0">
                                         <td className="px-4 py-3 text-sm font-medium text-slate-900">
                                             {member.studentName || "Unnamed"}
@@ -249,6 +247,12 @@ const OrganizationMembers = () => {
                                 ))}
                             </tbody>
                         </table>
+
+                        {hasMore && filteredMembers.length > 0 && (
+                            <div ref={loadMoreRef} className="py-4 text-center text-sm text-slate-500">
+                                Loading more members...
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

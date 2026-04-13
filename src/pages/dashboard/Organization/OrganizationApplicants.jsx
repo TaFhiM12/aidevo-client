@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Search,
   Filter,
@@ -17,22 +17,19 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import axios from "axios";
+import { useQuery } from "@tanstack/react-query";
 import useAuth from "../../../hooks/useAuth";
 import useUserRole from "../../../hooks/useUserRole";
 import API from "../../../utils/api";
+import useInfiniteScrollSlice from "../../../hooks/useInfiniteScrollSlice";
 
 const OrganizationApplicants = () => {
   const { user } = useAuth();
   const { userInfo, isLoading: roleLoading } = useUserRole();
-  const [applications, setApplications] = useState([]);
-  const [filteredApplications, setFilteredApplications] = useState([]);
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
-  const [loading, setLoading] = useState(true);
   const [selectedApplication, setSelectedApplication] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [error, setError] = useState("");
 
   const statusOptions = [
     { value: "all", label: "All Applications", color: "gray", icon: Users },
@@ -41,44 +38,25 @@ const OrganizationApplicants = () => {
     { value: "rejected", label: "Rejected", color: "red", icon: XCircle },
   ];
 
-  useEffect(() => {
-    if (user && userInfo) {
-      fetchApplications();
-    }
-  }, [user, userInfo]);
+  const {
+    data: applications = [],
+    isLoading: loading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["organization-applications", userInfo?.organizationId],
+    enabled: Boolean(user && userInfo?.organizationId),
+    queryFn: async () => {
+      const response = await API.get(
+        `/organizations/by-id/${userInfo.organizationId}/applications`
+      );
 
-  useEffect(() => {
-    filterApplications();
-  }, [applications, searchTerm, selectedStatus]);
+      return Array.isArray(response?.data) ? response.data : [];
+    },
+    staleTime: 1000 * 60 * 2,
+  });
 
-  const fetchApplications = async () => {
-  try {
-    setLoading(true);
-    setError("");
-
-    if (!userInfo?.organizationId) {
-      throw new Error("Organization ID not found");
-    }
-
-    const response = await API.get(
-      `/organizations/by-id/${userInfo.organizationId}/applications`
-    );
-
-    const applicationsData = Array.isArray(response.data)
-      ? response.data
-      : [];
-
-    setApplications(applicationsData);
-  } catch (error) {
-    console.error("Error fetching applications:", error);
-    setError("Failed to load applications. Please try again.");
-    setApplications([]);
-  } finally {
-    setLoading(false);
-  }
-};
-
-  const filterApplications = () => {
+  const filteredApplications = useMemo(() => {
     let filtered = applications;
 
     // Search filter
@@ -101,8 +79,17 @@ const OrganizationApplicants = () => {
       filtered = filtered.filter((app) => app.status === selectedStatus);
     }
 
-    setFilteredApplications(filtered);
-  };
+    return filtered;
+  }, [applications, searchTerm, selectedStatus]);
+
+  const {
+    visibleItems: visibleApplications,
+    hasMore,
+    loadMoreRef,
+  } = useInfiniteScrollSlice(filteredApplications, {
+    pageSize: 20,
+    resetDeps: [searchTerm, selectedStatus, filteredApplications.length],
+  });
 
   const updateApplicationStatus = async (applicationId, status, notes = "") => {
   try {
@@ -112,7 +99,7 @@ const OrganizationApplicants = () => {
     );
 
     if (res.success) {
-      fetchApplications();
+      refetch();
     } else {
       throw new Error(res.message || "Failed to update status");
     }
@@ -135,9 +122,7 @@ const OrganizationApplicants = () => {
     const res = await API.delete(`/applications/${applicationId}`);
 
     if (res.success) {
-      setApplications((prev) =>
-        prev.filter((app) => app._id !== applicationId)
-      );
+      refetch();
     } else {
       throw new Error(res.message || "Failed to delete");
     }
@@ -225,7 +210,7 @@ const OrganizationApplicants = () => {
           >
             <div className="flex items-center gap-3">
               <AlertCircle className="w-5 h-5" />
-              <span className="font-medium">{error}</span>
+              <span className="font-medium">{String(error || "Failed to load applications. Please try again.")}</span>
             </div>
           </motion.div>
         )}
@@ -330,7 +315,7 @@ const OrganizationApplicants = () => {
               </thead>
               <tbody className="divide-y divide-gray-200">
                 <AnimatePresence>
-                  {filteredApplications.map((application, index) => {
+                  {visibleApplications.map((application, index) => {
                     const StatusIcon = getStatusIcon(application.status);
 
                     const studentName =
@@ -476,6 +461,12 @@ const OrganizationApplicants = () => {
               </tbody>
             </table>
           </div>
+
+          {hasMore && filteredApplications.length > 0 && (
+            <div ref={loadMoreRef} className="py-4 text-center text-sm text-gray-500">
+              Loading more applications...
+            </div>
+          )}
 
           {/* Empty State */}
           {filteredApplications.length === 0 && (

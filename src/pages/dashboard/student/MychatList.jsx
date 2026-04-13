@@ -21,12 +21,14 @@ import {
   FileText,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import socketService from "../../../utils/Socket";
 import useAuth from "../../../hooks/useAuth";
 import API from "../../../utils/api";
 import { getOtherParticipant } from '../../../utils/chatParticipant';
 import { uploadChatAttachment } from "../../../utils/uploadToCloudinary";
+import useInfiniteScrollSlice from "../../../hooks/useInfiniteScrollSlice";
 
 const MychatList = () => {
   const { user } = useAuth();
@@ -76,19 +78,44 @@ const MychatList = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, [mobileView]);
 
-  const fetchCurrentUserObjectId = async () => {
-    try {
+  const currentUserQuery = useQuery({
+    queryKey: ["chat-current-user", user?.uid],
+    enabled: Boolean(user?.uid),
+    queryFn: async () => {
       const response = await API.get(`/users/uid/${user.uid}`);
-      const appUser = response.data;
-      const objectId = appUser?._id || null;
-      setCurrentUserObjectId(objectId);
-      return objectId;
-    } catch (error) {
-      console.error("Error fetching current user object id:", error);
-      setCurrentUserObjectId(null);
-      return null;
-    }
-  };
+      return response?.data?._id || null;
+    },
+    staleTime: 1000 * 60 * 10,
+  });
+
+  const conversationsQuery = useQuery({
+    queryKey: ["chat-conversations", user?.uid],
+    enabled: Boolean(user?.uid),
+    queryFn: async () => {
+      const response = await API.get(`/conversations/user/${user.uid}`);
+      return Array.isArray(response?.data) ? response.data : [];
+    },
+    staleTime: 1000 * 60 * 2,
+  });
+
+  const organizationsQuery = useQuery({
+    queryKey: ["chat-organizations"],
+    queryFn: async () => {
+      const response = await API.get("/organizations");
+      return Array.isArray(response?.data) ? response.data : [];
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const myOrganizationsQuery = useQuery({
+    queryKey: ["chat-my-organizations", currentUserObjectId],
+    enabled: Boolean(currentUserObjectId),
+    queryFn: async () => {
+      const response = await API.get(`/students/${currentUserObjectId}/organizations`);
+      return Array.isArray(response?.data) ? response.data : [];
+    },
+    staleTime: 1000 * 60 * 3,
+  });
 
   const handleNewMessage = useCallback(
     (message) => {
@@ -254,21 +281,26 @@ const MychatList = () => {
   }, [handleMessageDeliveryUpdated, handleNewMessage, handleMessagesRead, selectedConversation, user?.uid]);
 
   useEffect(() => {
-    const init = async () => {
-      if (!user?.uid) return;
+    setCurrentUserObjectId(currentUserQuery.data || null);
+  }, [currentUserQuery.data]);
 
-      const objectId = await fetchCurrentUserObjectId();
-      if (!objectId) return;
+  useEffect(() => {
+    if (Array.isArray(conversationsQuery.data)) {
+      setConversations(conversationsQuery.data);
+    }
+  }, [conversationsQuery.data]);
 
-      await Promise.all([
-        fetchConversations(),
-        fetchOrganizations(),
-        fetchMyOrganizations(objectId),
-      ]);
-    };
+  useEffect(() => {
+    if (Array.isArray(organizationsQuery.data)) {
+      setOrganizations(organizationsQuery.data);
+    }
+  }, [organizationsQuery.data]);
 
-    init();
-  }, [user]);
+  useEffect(() => {
+    if (Array.isArray(myOrganizationsQuery.data)) {
+      setMyOrganizations(myOrganizationsQuery.data);
+    }
+  }, [myOrganizationsQuery.data]);
 
   useEffect(() => {
     return () => {
@@ -296,37 +328,6 @@ const MychatList = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-
-  const fetchConversations = async () => {
-    try {
-      const response = await API.get(`/conversations/user/${user.uid}`);
-      setConversations(Array.isArray(response.data) ? response.data : []);
-    } catch (error) {
-      console.error("Error fetching conversations:", error);
-      setConversations([]);
-    }
-  };
-
-  const fetchOrganizations = async () => {
-    try {
-      const response = await API.get("/organizations");
-      setOrganizations(Array.isArray(response.data) ? response.data : []);
-    } catch (error) {
-      console.error("Error fetching organizations:", error);
-      setOrganizations([]);
-    }
-  };
-
-  const fetchMyOrganizations = async (studentId) => {
-    try {
-      if (!studentId) return;
-      const response = await API.get(`/students/${studentId}/organizations`);
-      setMyOrganizations(Array.isArray(response.data) ? response.data : []);
-    } catch (error) {
-      console.error("Error fetching my organizations:", error);
-      setMyOrganizations([]);
-    }
-  };
 
   const fetchMessages = async (conversationId) => {
     try {
@@ -593,6 +594,33 @@ const MychatList = () => {
       org.organizationInfo?.type?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const {
+    visibleItems: visibleConversations,
+    hasMore: hasMoreConversations,
+    loadMoreRef: loadMoreConversationsRef,
+  } = useInfiniteScrollSlice(filteredConversations, {
+    pageSize: 12,
+    resetDeps: [activeTab, searchTerm, filteredConversations.length],
+  });
+
+  const {
+    visibleItems: visibleMyOrganizations,
+    hasMore: hasMoreMyOrganizations,
+    loadMoreRef: loadMoreMyOrganizationsRef,
+  } = useInfiniteScrollSlice(filteredMyOrganizations, {
+    pageSize: 10,
+    resetDeps: [activeTab, searchTerm, filteredMyOrganizations.length],
+  });
+
+  const {
+    visibleItems: visibleModalOrganizations,
+    hasMore: hasMoreModalOrganizations,
+    loadMoreRef: loadMoreModalOrganizationsRef,
+  } = useInfiniteScrollSlice(filteredOrganizations, {
+    pageSize: 12,
+    resetDeps: [searchTerm, showNewChat, filteredOrganizations.length],
+  });
+
   const selectedOtherParticipant = selectedConversation
     ? getOtherParticipant(selectedConversation, currentUserObjectId)
     : null;
@@ -725,7 +753,7 @@ const MychatList = () => {
                 {activeTab === 'chats' && (
                   <div>
                     <AnimatePresence>
-                      {filteredConversations.map((conversation, index) => {
+                      {visibleConversations.map((conversation, index) => {
                         const other = getOtherParticipant(conversation, currentUserObjectId);
                         if (!other) return null;
 
@@ -800,6 +828,12 @@ const MychatList = () => {
                       })}
                     </AnimatePresence>
 
+                    {hasMoreConversations && filteredConversations.length > 0 && (
+                      <div ref={loadMoreConversationsRef} className="py-4 text-center text-xs text-gray-500">
+                        Loading more chats...
+                      </div>
+                    )}
+
                     {filteredConversations.length === 0 && (
                       <div className="text-center py-8 px-4">
                         <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
@@ -827,7 +861,7 @@ const MychatList = () => {
                     </div>
 
                     <AnimatePresence>
-                      {filteredMyOrganizations.map((org, index) => {
+                      {visibleMyOrganizations.map((org, index) => {
                         // Fix: Match by userId instead of name for reliability
                         const existingConv = conversations.find((conv) => {
                           const other = getOtherParticipant(conv, currentUserObjectId);
@@ -917,6 +951,12 @@ const MychatList = () => {
                         );
                       })}
                     </AnimatePresence>
+
+                    {hasMoreMyOrganizations && filteredMyOrganizations.length > 0 && (
+                      <div ref={loadMoreMyOrganizationsRef} className="py-4 text-center text-xs text-gray-500">
+                        Loading more organizations...
+                      </div>
+                    )}
 
                     {filteredMyOrganizations.length === 0 && (
                       <div className="text-center py-8 px-4">
@@ -1296,7 +1336,7 @@ const MychatList = () => {
               </div>
 
               <div className="flex-1 overflow-y-auto">
-                {filteredOrganizations.map((org) => (
+                {visibleModalOrganizations.map((org) => (
                   <motion.button
                     key={org._id}
                     whileHover={{ scale: 1.01 }}
@@ -1330,6 +1370,12 @@ const MychatList = () => {
                     </div>
                   </motion.button>
                 ))}
+
+                {hasMoreModalOrganizations && filteredOrganizations.length > 0 && (
+                  <div ref={loadMoreModalOrganizationsRef} className="py-3 text-center text-xs text-gray-500">
+                    Loading more organizations...
+                  </div>
+                )}
 
                 {filteredOrganizations.length === 0 && (
                   <div className="text-center py-8">
