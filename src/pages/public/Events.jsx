@@ -34,6 +34,18 @@ const Events = () => {
   const { user } = useAuth();
   const { globalUserInfo } = useUserContext();
 
+  const normalizeInterests = (value) => {
+    if (Array.isArray(value)) {
+      return value.map((interest) => String(interest).trim()).filter(Boolean).join(", ");
+    }
+
+    return String(value || "")
+      .split(",")
+      .map((interest) => interest.trim())
+      .filter(Boolean)
+      .join(", ");
+  };
+
   useEffect(() => {
     fetchEvents();
   }, []);
@@ -359,7 +371,7 @@ const Events = () => {
         {user && globalUserInfo?._id && (
           <>
             <EventRecommendationsSection
-              studentId={globalUserInfo._id}
+              studentId={globalUserInfo.uid || globalUserInfo._id || globalUserInfo.studentId}
               requesterUid={user.uid}
               title="Recommended For You"
               limit={6}
@@ -370,7 +382,7 @@ const Events = () => {
 
         {/* Trending Events Section */}
         <TrendingEventsSection
-          interests={globalUserInfo?.interests || ""}
+          interests={normalizeInterests(globalUserInfo?.interests)}
           title="Trending Now"
           limit={6}
         />

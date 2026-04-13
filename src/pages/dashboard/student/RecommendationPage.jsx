@@ -12,6 +12,17 @@ const RecommendationPage = () => {
   const { userInfo, loading, error } = useUserRole();
   const [refreshKey, setRefreshKey] = useState(0);
 
+  const normalizeInterests = (value) => {
+    if (Array.isArray(value)) {
+      return value.map((interest) => String(interest).trim()).filter(Boolean);
+    }
+
+    return String(value || "")
+      .split(",")
+      .map((interest) => interest.trim())
+      .filter(Boolean);
+  };
+
   if (loading) {
     return <Loading />;
   }
@@ -40,7 +51,8 @@ const RecommendationPage = () => {
     );
   }
 
-  const interests = userInfo?.interests || "";
+  const interests = normalizeInterests(userInfo?.interests);
+  const studentIdentifier = userInfo?.uid || userInfo?._id || userInfo?.studentId;
 
   return (
     <div className="min-h-full bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50 p-2 md:p-4 rounded-2xl">
@@ -75,19 +87,15 @@ const RecommendationPage = () => {
 
           <div className="mt-5 flex flex-wrap items-center gap-2 text-sm text-gray-600">
             <span className="font-semibold text-gray-800">Interests:</span>
-            {interests ? (
-              interests
-                .split(",")
-                .map((interest) => interest.trim())
-                .filter(Boolean)
-                .map((interest) => (
-                  <span
-                    key={interest}
-                    className="px-2.5 py-1 rounded-full bg-blue-100 text-blue-700 font-medium"
-                  >
-                    {interest}
-                  </span>
-                ))
+            {interests.length > 0 ? (
+              interests.map((interest) => (
+                <span
+                  key={interest}
+                  className="px-2.5 py-1 rounded-full bg-blue-100 text-blue-700 font-medium"
+                >
+                  {interest}
+                </span>
+              ))
             ) : (
               <span className="px-2.5 py-1 rounded-full bg-gray-100 text-gray-700">
                 No interests set yet
@@ -98,7 +106,7 @@ const RecommendationPage = () => {
 
         <EventRecommendationsSection
           key={`recommended-${refreshKey}`}
-          studentId={userInfo.studentId || userInfo._id}
+          studentId={studentIdentifier}
           requesterUid={user.uid}
           title="Recommended For You"
           limit={6}
