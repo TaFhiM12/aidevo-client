@@ -414,7 +414,7 @@ const MyOrganization = () => {
                   : "You are not a member of any organizations yet."}
               </p>
               <Link
-                to="/organizations"
+                to="/organization"
                 className="mt-4 inline-flex items-center gap-2 px-6 py-3 bg-blue-500 text-white rounded-xl font-semibold hover:bg-blue-600 transition-colors"
               >
                 <Heart className="w-4 h-4" />
