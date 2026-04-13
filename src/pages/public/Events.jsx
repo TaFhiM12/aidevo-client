@@ -32,6 +32,10 @@ const Events = () => {
 
   const { user } = useAuth();
   const { globalUserInfo } = useUserContext();
+  const isStudentUser = String(globalUserInfo?.role || "").toLowerCase() === "student";
+  const recommendationStudentId = isStudentUser
+    ? globalUserInfo?.uid || globalUserInfo?._id || globalUserInfo?.studentId
+    : null;
 
   const formatOptionLabel = (value, allLabel, replacer = null) => {
     const text = String(value || "").trim();
@@ -397,10 +401,10 @@ const Events = () => {
         </motion.div>
 
         {/* Personalized Recommendations - Only for logged-in students */}
-        {user && globalUserInfo?._id && (
+        {user && recommendationStudentId && (
           <>
             <EventRecommendationsSection
-              studentId={globalUserInfo.uid || globalUserInfo._id || globalUserInfo.studentId}
+              studentId={recommendationStudentId}
               requesterUid={user.uid}
               title="Recommended For You"
               limit={6}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useParams, Link, useNavigate } from "react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Calendar,
   MapPin,
@@ -28,19 +29,19 @@ import {
 } from "lucide-react";
 import API from "../../utils/api";
 import useAuth from "../../hooks/useAuth";
+import useUserRole from "../../hooks/useUserRole";
 import toast from "react-hot-toast";
 
 const EventDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [event, setEvent] = useState(null);
-  const [relatedEvents, setRelatedEvents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { userInfo } = useUserRole();
+  const queryClient = useQueryClient();
+  const isStudentUser = String(userInfo?.role || "").toLowerCase() === "student";
   const [activeTab, setActiveTab] = useState("details");
   const [isRegistered, setIsRegistered] = useState(false);
   const [attendanceSubmitting, setAttendanceSubmitting] = useState(false);
-  const [studentPayments, setStudentPayments] = useState([]);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentError, setPaymentError] = useState("");
@@ -51,75 +52,45 @@ const EventDetails = () => {
     cvv: "",
   });
 
-  useEffect(() => {
-    fetchEventDetails();
-    fetchRelatedEvents();
-  }, [id]);
+  const { data: event = null, isLoading: loading } = useQuery({
+    queryKey: ["event-details", id],
+    enabled: Boolean(id),
+    queryFn: async () => {
+      const response = await API.get(`/events/${id}`);
+      return response?.success ? response.data : null;
+    },
+  });
+
+  const { data: relatedEvents = [] } = useQuery({
+    queryKey: ["event-related", id],
+    enabled: Boolean(id),
+    queryFn: async () => {
+      const response = await API.get(`/events/${id}/related`);
+      return response?.success && Array.isArray(response?.data) ? response.data : [];
+    },
+  });
+
+  const { data: studentPayments = [] } = useQuery({
+    queryKey: ["event-student-payments", user?.uid],
+    enabled: Boolean(user?.uid && isStudentUser),
+    queryFn: async () => {
+      const response = await API.get(`/payments/student/${user.uid}`);
+      return Array.isArray(response?.data) ? response.data : [];
+    },
+  });
+
+  const { data: attendanceStatus = false } = useQuery({
+    queryKey: ["event-attendance-status", id, user?.uid],
+    enabled: Boolean(id && user?.uid && isStudentUser),
+    queryFn: async () => {
+      const response = await API.get(`/events/${id}/attendance-status`);
+      return Boolean(response?.data?.isAttending);
+    },
+  });
 
   useEffect(() => {
-    const fetchStudentPayments = async () => {
-      if (!user?.uid) return;
-      try {
-        const response = await API.get(`/payments/student/${user.uid}`);
-        setStudentPayments(Array.isArray(response?.data) ? response.data : []);
-      } catch (error) {
-        setStudentPayments([]);
-      }
-    };
-
-    fetchStudentPayments();
-  }, [user?.uid, id]);
-
-  useEffect(() => {
-    const fetchAttendanceStatus = async () => {
-      if (!user?.uid || !id) {
-        setIsRegistered(false);
-        return;
-      }
-
-      try {
-        const response = await API.get(`/events/${id}/attendance-status`);
-        setIsRegistered(Boolean(response?.data?.isAttending));
-      } catch (error) {
-        setIsRegistered(false);
-      }
-    };
-
-    fetchAttendanceStatus();
-  }, [user?.uid, id]);
-
-  const fetchEventDetails = async () => {
-  try {
-    const response = await API.get(`/events/${id}`);
-    
-
-    if (response.success) {
-      setEvent(response.data);
-    } else {
-      setEvent(null);
-    }
-  } catch (error) {
-    console.error("Error fetching event:", error);
-    setEvent(null);
-  } finally {
-    setLoading(false);
-  }
-};
-
-const fetchRelatedEvents = async () => {
-  try {
-    const response = await API.get(`/events/${id}/related`);
-
-    if (response.success) {
-      setRelatedEvents(Array.isArray(response.data) ? response.data : []);
-    } else {
-      setRelatedEvents([]);
-    }
-  } catch (error) {
-    console.error("Error fetching related events:", error);
-    setRelatedEvents([]);
-  }
-};
+    setIsRegistered(isStudentUser ? attendanceStatus : false);
+  }, [attendanceStatus, isStudentUser]);
 
   const isPaidEvent = Number(event?.fee || 0) > 0;
   const hasPaidForEvent = studentPayments.some(
@@ -181,6 +152,11 @@ const fetchRelatedEvents = async () => {
       return;
     }
 
+    if (!isStudentUser) {
+      toast.error("Only student accounts can register attendance.");
+      return;
+    }
+
     if (isPaidEvent && !hasPaidForEvent) {
       setShowPaymentModal(true);
       return;
@@ -190,6 +166,7 @@ const fetchRelatedEvents = async () => {
       setAttendanceSubmitting(true);
       const response = await API.post(`/events/${id}/attend`, {});
       setIsRegistered(true);
+      queryClient.invalidateQueries({ queryKey: ["event-attendance-status", id, user?.uid] });
       toast.success(response?.message || "Attendance confirmed");
     } catch (error) {
       toast.error(typeof error === "string" ? error : "Failed to register for this event");
@@ -218,8 +195,8 @@ const fetchRelatedEvents = async () => {
         cardLast4: digits.slice(-4),
       });
 
-      const response = await API.get(`/payments/student/${user.uid}`);
-      setStudentPayments(Array.isArray(response?.data) ? response.data : []);
+      queryClient.invalidateQueries({ queryKey: ["event-student-payments", user?.uid] });
+      queryClient.invalidateQueries({ queryKey: ["event-attendance-status", id, user?.uid] });
       setIsRegistered(true);
       setShowPaymentModal(false);
       setPaymentForm({ cardNumber: "", cardHolder: "", expiry: "", cvv: "" });
@@ -709,7 +686,14 @@ const fetchRelatedEvents = async () => {
                     )}
                   </div>
 
-                  {isRegistered ? (
+                  {!isStudentUser ? (
+                    <div className="bg-white/15 border border-white/30 rounded-xl p-4 text-center">
+                      <p className="font-semibold">View Only For Organizations</p>
+                      <p className="text-sm opacity-90 mt-1">
+                        Attendance and registration are available for student accounts only.
+                      </p>
+                    </div>
+                  ) : isRegistered ? (
                     <div className="bg-green-500/20 border border-green-400 rounded-xl p-4 text-center">
                         <p className="font-semibold">You're Registered!</p>
                       <p className="text-sm opacity-90 mt-1">

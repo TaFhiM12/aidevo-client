@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Link, useParams } from "react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   Building2,
   MapPin,
@@ -16,38 +17,22 @@ import Loading from "../../components/common/Loading";
 
 const OrganizationDetails = () => {
   const { id } = useParams();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [organization, setOrganization] = useState(null);
-
-  useEffect(() => {
-    const fetchOrganization = async () => {
-      try {
-        setLoading(true);
-        setError("");
-
-        const response = await API.get("/organizations");
-        const organizations = Array.isArray(response?.data) ? response.data : [];
-        const found = organizations.find((item) => String(item?._id) === String(id));
-
-        if (!found) {
-          setOrganization(null);
-          setError("Organization not found.");
-          return;
-        }
-
-        setOrganization(found);
-      } catch (err) {
-        console.error("Error fetching organization details:", err);
-        setOrganization(null);
-        setError(typeof err === "string" ? err : "Failed to load organization details.");
-      } finally {
-        setLoading(false);
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ["organization-details", id],
+    enabled: Boolean(id),
+    queryFn: async () => {
+      const response = await API.get("/organizations");
+      const organizations = Array.isArray(response?.data) ? response.data : [];
+      const found = organizations.find((item) => String(item?._id) === String(id));
+      if (!found) {
+        return { organization: null, error: "Organization not found." };
       }
-    };
+      return { organization: found, error: "" };
+    },
+  });
 
-    fetchOrganization();
-  }, [id]);
+  const organization = data?.organization || null;
+  const error = data?.error || "";
 
   const organizationInfo = useMemo(() => organization?.organization || {}, [organization]);
 

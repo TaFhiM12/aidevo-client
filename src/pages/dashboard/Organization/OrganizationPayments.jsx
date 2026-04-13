@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
     CreditCard,
     Receipt,
@@ -10,35 +11,32 @@ import {
 import useUserRole from "../../../hooks/useUserRole";
 import API from "../../../utils/api";
 import Loading from "../../../components/common/Loading";
+import useInfiniteScrollSlice from "../../../hooks/useInfiniteScrollSlice";
 
 const OrganizationPayments = () => {
     const { userInfo } = useUserRole();
-    const [payments, setPayments] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const {
+        data: payments = [],
+        isLoading: loading,
+    } = useQuery({
+        queryKey: ["organization-payments", userInfo?.email],
+        enabled: Boolean(userInfo?.email),
+        queryFn: async () => {
+            const response = await API.get(
+                `/payments/organization/${encodeURIComponent(userInfo.email)}`
+            );
+            return Array.isArray(response?.data) ? response.data : [];
+        },
+    });
 
-    useEffect(() => {
-        const fetchPayments = async () => {
-            if (!userInfo?.email) {
-                setLoading(false);
-                return;
-            }
-
-            try {
-                setLoading(true);
-                const response = await API.get(
-                    `/payments/organization/${encodeURIComponent(userInfo.email)}`
-                );
-                setPayments(Array.isArray(response?.data) ? response.data : []);
-            } catch (error) {
-                console.error("Failed to fetch organization payments:", error);
-                setPayments([]);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchPayments();
-    }, [userInfo?.email]);
+    const {
+        visibleItems: visiblePayments,
+        hasMore: hasMorePayments,
+        loadMoreRef: paymentsLoadMoreRef,
+    } = useInfiniteScrollSlice(payments, {
+        pageSize: 20,
+        resetDeps: [payments.length],
+    });
 
     const summary = useMemo(() => {
         const totalRevenue = payments.reduce((sum, item) => sum + Number(item.amount || 0), 0);
@@ -228,7 +226,7 @@ const OrganizationPayments = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {payments.map((payment) => (
+                                {visiblePayments.map((payment) => (
                                     <tr key={String(payment._id)} className="border-t border-slate-100">
                                         <td className="px-5 py-3 text-slate-900 font-medium">{payment.eventTitle}</td>
                                         <td className="px-5 py-3 text-slate-700">{payment.studentName || payment.studentEmail}</td>
@@ -250,6 +248,13 @@ const OrganizationPayments = () => {
                                         </td>
                                     </tr>
                                 ))}
+                                {hasMorePayments && (
+                                    <tr>
+                                        <td colSpan={6} className="px-5 py-4 text-center text-xs text-slate-500">
+                                            <div ref={paymentsLoadMoreRef}>Loading more transactions...</div>
+                                        </td>
+                                    </tr>
+                                )}
                             </tbody>
                         </table>
                     </div>

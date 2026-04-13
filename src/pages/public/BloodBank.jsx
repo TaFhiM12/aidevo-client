@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   HeartPulse,
   MapPin,
@@ -22,6 +23,7 @@ import {
 import toast from "react-hot-toast";
 import API from "../../utils/api";
 import useUserRole from "../../hooks/useUserRole";
+import useInfiniteScrollSlice from "../../hooks/useInfiniteScrollSlice";
 
 const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 const URGENCY_LEVELS = ["critical", "high", "medium"];
@@ -78,19 +80,10 @@ const formatTimeAgo = (dateLike) => {
 const BloodBank = () => {
   const { userInfo } = useUserRole();
   const isAdmin = userInfo?.role === "super-admin" || userInfo?.role === "superAdmin";
+  const queryClient = useQueryClient();
 
   const [loading, setLoading] = useState(false);
   const [requestLoading, setRequestLoading] = useState(false);
-  const [donorsLoading, setDonorsLoading] = useState(true);
-  const [requestsLoading, setRequestsLoading] = useState(true);
-  const [moderationLoading, setModerationLoading] = useState(false);
-
-  const [donors, setDonors] = useState([]);
-  const [urgentRequests, setUrgentRequests] = useState([]);
-  const [moderationQueue, setModerationQueue] = useState({
-    pendingDonors: [],
-    urgentRequests: [],
-  });
 
   const [selectedBloodGroup, setSelectedBloodGroup] = useState("all");
   const [selectedUrgency, setSelectedUrgency] = useState("all");
@@ -150,69 +143,48 @@ const BloodBank = () => {
     [requestMapReady, requestForm.latitude, requestForm.longitude]
   );
 
-  const fetchDonors = useCallback(async () => {
-    try {
-      setDonorsLoading(true);
+  const {
+    data: donors = [],
+    isLoading: donorsLoading,
+  } = useQuery({
+    queryKey: ["blood-bank-donors"],
+    queryFn: async () => {
       const response = await API.get("/blood-bank/donors?limit=20");
-      setDonors(Array.isArray(response?.data) ? response.data : []);
-    } catch {
-      setDonors([]);
-    } finally {
-      setDonorsLoading(false);
-    }
-  }, []);
+      return Array.isArray(response?.data) ? response.data : [];
+    },
+  });
 
-  const fetchUrgentRequests = useCallback(async () => {
-    try {
-      setRequestsLoading(true);
+  const {
+    data: urgentRequests = [],
+    isLoading: requestsLoading,
+    refetch: refetchUrgentRequests,
+  } = useQuery({
+    queryKey: ["blood-bank-urgent-requests"],
+    queryFn: async () => {
       const response = await API.get("/blood-bank/requests?limit=20");
-      setUrgentRequests(Array.isArray(response?.data) ? response.data : []);
-    } catch {
-      setUrgentRequests([]);
-    } finally {
-      setRequestsLoading(false);
-    }
-  }, []);
+      return Array.isArray(response?.data) ? response.data : [];
+    },
+    refetchInterval: 25000,
+  });
 
-  const fetchModerationQueue = useCallback(async () => {
-    if (!isAdmin) return;
-
-    try {
-      setModerationLoading(true);
+  const {
+    data: moderationQueue = { pendingDonors: [], urgentRequests: [] },
+    isLoading: moderationQueueLoading,
+  } = useQuery({
+    queryKey: ["blood-bank-moderation-queue", isAdmin],
+    enabled: isAdmin,
+    queryFn: async () => {
       const response = await API.get("/blood-bank/admin/queue");
-      setModerationQueue({
+      return {
         pendingDonors: Array.isArray(response?.data?.pendingDonors)
           ? response.data.pendingDonors
           : [],
         urgentRequests: Array.isArray(response?.data?.urgentRequests)
           ? response.data.urgentRequests
           : [],
-      });
-    } catch {
-      setModerationQueue({ pendingDonors: [], urgentRequests: [] });
-    } finally {
-      setModerationLoading(false);
-    }
-  }, [isAdmin]);
-
-  useEffect(() => {
-    fetchDonors();
-    fetchUrgentRequests();
-  }, [fetchDonors, fetchUrgentRequests]);
-
-  useEffect(() => {
-    fetchModerationQueue();
-  }, [fetchModerationQueue]);
-
-  useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      fetchUrgentRequests();
-    }, 25000);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [fetchUrgentRequests]);
+      };
+    },
+  });
 
   const handleChange = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -280,8 +252,8 @@ const BloodBank = () => {
         latitude: "",
         longitude: "",
       });
-      fetchDonors();
-      fetchModerationQueue();
+      queryClient.invalidateQueries({ queryKey: ["blood-bank-donors"] });
+      queryClient.invalidateQueries({ queryKey: ["blood-bank-moderation-queue"] });
     } catch (error) {
       toast.error(typeof error === "string" ? error : "Failed to submit donor info");
     } finally {
@@ -316,8 +288,8 @@ const BloodBank = () => {
         latitude: "",
         longitude: "",
       });
-      fetchUrgentRequests();
-      fetchModerationQueue();
+      queryClient.invalidateQueries({ queryKey: ["blood-bank-urgent-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["blood-bank-moderation-queue"] });
     } catch (error) {
       toast.error(typeof error === "string" ? error : "Failed to submit urgent request");
     } finally {
@@ -389,6 +361,24 @@ const BloodBank = () => {
     return list;
   }, [urgentRequests, selectedUrgency]);
 
+  const {
+    visibleItems: visibleDonors,
+    hasMore: hasMoreDonors,
+    loadMoreRef: donorsLoadMoreRef,
+  } = useInfiniteScrollSlice(filteredDonors, {
+    pageSize: 18,
+    resetDeps: [selectedBloodGroup, sortMode, donorSearch, filteredDonors.length],
+  });
+
+  const {
+    visibleItems: visibleRequests,
+    hasMore: hasMoreRequests,
+    loadMoreRef: requestsLoadMoreRef,
+  } = useInfiniteScrollSlice(prioritizedRequests, {
+    pageSize: 12,
+    resetDeps: [selectedUrgency, prioritizedRequests.length],
+  });
+
   const stats = useMemo(() => {
     const critical = urgentRequests.filter((r) => r.urgencyLevel === "critical").length;
     const high = urgentRequests.filter((r) => r.urgencyLevel === "high").length;
@@ -412,8 +402,8 @@ const BloodBank = () => {
     try {
       await API.patch(`/blood-bank/admin/donors/${donorId}/status`, { status });
       toast.success(`Donor marked as ${status}`);
-      fetchModerationQueue();
-      fetchDonors();
+      queryClient.invalidateQueries({ queryKey: ["blood-bank-moderation-queue"] });
+      queryClient.invalidateQueries({ queryKey: ["blood-bank-donors"] });
     } catch (error) {
       toast.error(typeof error === "string" ? error : "Failed to update donor status");
     }
@@ -423,8 +413,8 @@ const BloodBank = () => {
     try {
       await API.patch(`/blood-bank/admin/requests/${requestId}/status`, { status });
       toast.success(`Request marked as ${status}`);
-      fetchModerationQueue();
-      fetchUrgentRequests();
+      queryClient.invalidateQueries({ queryKey: ["blood-bank-moderation-queue"] });
+      queryClient.invalidateQueries({ queryKey: ["blood-bank-urgent-requests"] });
     } catch (error) {
       toast.error(typeof error === "string" ? error : "Failed to update request status");
     }
@@ -517,7 +507,7 @@ const BloodBank = () => {
                 ))}
               </select>
               <button
-                onClick={fetchUrgentRequests}
+                onClick={() => refetchUrgentRequests()}
                 className="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 text-sm inline-flex items-center gap-1"
               >
                 <RefreshCcw className="w-3.5 h-3.5" />
@@ -532,7 +522,7 @@ const BloodBank = () => {
             <p className="text-slate-500">No active urgent requests for the selected filter.</p>
           ) : (
             <div className="space-y-3 max-h-[420px] overflow-auto pr-1">
-              {prioritizedRequests.map((request) => (
+              {visibleRequests.map((request) => (
                 <div
                   key={String(request._id)}
                   className="rounded-xl border border-slate-200 p-4 bg-white shadow-sm"
@@ -592,6 +582,11 @@ const BloodBank = () => {
                   </div>
                 </div>
               ))}
+              {hasMoreRequests && (
+                <div ref={requestsLoadMoreRef} className="py-2 text-center text-xs text-slate-500">
+                  Loading more requests...
+                </div>
+              )}
             </div>
           )}
         </section>
@@ -908,7 +903,7 @@ const BloodBank = () => {
               <p className="text-slate-500">No donors available for this filter.</p>
             ) : (
               <div className="space-y-3 max-h-[620px] overflow-auto pr-1">
-                {filteredDonors.map((donor) => (
+                  {visibleDonors.map((donor) => (
                   <div key={String(donor._id)} className="rounded-xl border border-slate-200 p-4 bg-white">
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -936,6 +931,11 @@ const BloodBank = () => {
                     </div>
                   </div>
                 ))}
+                {hasMoreDonors && (
+                  <div ref={donorsLoadMoreRef} className="py-2 text-center text-xs text-slate-500">
+                    Loading more donors...
+                  </div>
+                )}
               </div>
             )}
           </section>
@@ -964,7 +964,7 @@ const BloodBank = () => {
                 <p className="text-xl font-semibold text-emerald-700">{donors.length}</p>
               </div>
             </div>
-            {moderationLoading ? (
+            {moderationQueueLoading ? (
               <p className="text-slate-500">Loading moderation queue...</p>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

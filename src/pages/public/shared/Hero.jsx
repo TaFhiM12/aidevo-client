@@ -1,19 +1,21 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Users, Calendar, MessageCircle, Sparkles, ArrowRight, MapPin, Building2 } from 'lucide-react';
 import { Link } from 'react-router';
+import { useQuery } from '@tanstack/react-query';
 import API from '../../../utils/api';
 
 const Hero = () => {
-    const [stats, setStats] = useState({
+    const defaultStats = {
         organizations: 0,
         activeOrganizations: 0,
         events: 0,
         campuses: 0,
         applications: 0,
-    });
+    };
 
-    useEffect(() => {
-        const loadHeroStats = async () => {
+    const { data: stats = defaultStats } = useQuery({
+        queryKey: ['hero-stats'],
+        queryFn: async () => {
             try {
                 const [orgRes, eventRes] = await Promise.all([
                     API.get('/organizations/with-applications').catch(() => API.get('/organizations')),
@@ -38,20 +40,18 @@ const Hero = () => {
                     0
                 );
 
-                setStats({
+                return {
                     organizations: organizations.length,
                     activeOrganizations,
                     events: events.length,
                     campuses,
                     applications,
-                });
+                };
             } catch {
-                setStats((prev) => prev);
+                return defaultStats;
             }
-        };
-
-        loadHeroStats();
-    }, []);
+        },
+    });
 
     const topBadgeText = useMemo(() => {
         if (stats.organizations > 0) {

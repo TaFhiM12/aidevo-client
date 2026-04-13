@@ -34,6 +34,20 @@ export const useEventRecommendations = (studentId, limit = 6, requesterUid = "")
         }
       } catch (err) {
         if (isMounted) {
+          const statusCode = err?.statusCode || err?.status || err?.response?.status;
+          const message = String(
+            err?.message || err?.response?.data?.message || ""
+          ).toLowerCase();
+
+          if (
+            statusCode === 403 &&
+            (message.includes("only student") || message.includes("access denied"))
+          ) {
+            setRecommendations([]);
+            setError(null);
+            return;
+          }
+
           setError(err || "Failed to fetch recommendations");
           setRecommendations([]);
         }

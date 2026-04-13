@@ -25,27 +25,29 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import socketService from '../../../utils/Socket';
 import API from '../../../utils/api';
 import useAuth from '../../../hooks/useAuth';
+import useUserRole from '../../../hooks/useUserRole';
 import { getOtherParticipant } from '../../../utils/chatParticipant';
 import { uploadChatAttachment } from '../../../utils/uploadToCloudinary';
+import useInfiniteScrollSlice from '../../../hooks/useInfiniteScrollSlice';
 
 const OrganizationCommunication = () => {
   const { user } = useAuth();
+  const { userInfo } = useUserRole();
+  const queryClient = useQueryClient();
+  const canReadStudents = ["super-admin", "superAdmin"].includes(String(userInfo?.role || ""));
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
-  const [students, setStudents] = useState([]);
-  const [organizationMembers, setOrganizationMembers] = useState([]);
-  const [allOrganizations, setAllOrganizations] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileView, setMobileView] = useState('sidebar');
   const [activeTab, setActiveTab] = useState('chats');
-  const [currentUserObjectId, setCurrentUserObjectId] = useState(null);
   const [showNewChat, setShowNewChat] = useState(false);
   const [socketConnected, setSocketConnected] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
@@ -65,6 +67,60 @@ const OrganizationCommunication = () => {
 
   const QUICK_REPLIES = ['Hello!', 'Thank you for reaching out', 'Let us coordinate this', 'Can we schedule a meeting?'];
 
+  const { data: currentUserObjectId = null } = useQuery({
+    queryKey: ['organization-communication-user-id', user?.uid],
+    enabled: Boolean(user?.uid),
+    queryFn: async () => {
+      const response = await API.get(`/users/uid/${user.uid}`);
+      return response?.data?._id || null;
+    },
+  });
+
+  const { data: conversationSeed = [] } = useQuery({
+    queryKey: ['organization-communication-conversations', user?.uid],
+    enabled: Boolean(user?.uid),
+    queryFn: async () => {
+      const response = await API.get(`/conversations/user/${user.uid}`);
+      return Array.isArray(response?.data) ? response.data : [];
+    },
+  });
+
+  const { data: students = [] } = useQuery({
+    queryKey: ['organization-communication-students'],
+    enabled: canReadStudents,
+    queryFn: async () => {
+      const response = await API.get('/students');
+      return Array.isArray(response?.data) ? response.data : [];
+    },
+  });
+
+  const { data: organizationMembers = [] } = useQuery({
+    queryKey: ['organization-communication-members', user?.email],
+    enabled: Boolean(user?.email),
+    queryFn: async () => {
+      const response = await API.get(
+        `/organizations/email/${encodeURIComponent(user.email)}/members`
+      );
+      return Array.isArray(response?.data?.members) ? response.data.members : [];
+    },
+  });
+
+  const { data: allOrganizations = [] } = useQuery({
+    queryKey: ['organization-communication-organizations', currentUserObjectId],
+    enabled: Boolean(currentUserObjectId),
+    queryFn: async () => {
+      const response = await API.get('/organizations');
+      const organizationsData = Array.isArray(response?.data) ? response.data : [];
+      return organizationsData.filter(
+        (org) => String(org._id) !== String(currentUserObjectId)
+      );
+    },
+  });
+
+  useEffect(() => {
+    setConversations(conversationSeed);
+  }, [conversationSeed]);
+
   // Handle window resize
   useEffect(() => {
     const handleResize = () => {
@@ -76,89 +132,14 @@ const OrganizationCommunication = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const fetchCurrentUserObjectId = async () => {
-    try {
-      const response = await API.get(`/users/uid/${user.uid}`);
-      const appUser = response.data;
-      const objectId = appUser?._id || null;
-      setCurrentUserObjectId(objectId);
-      return objectId;
-    } catch (error) {
-      console.error("Error fetching organization object id:", error);
-      setCurrentUserObjectId(null);
-      return null;
-    }
-  };
-
-  const fetchConversations = async () => {
-    try {
-      const response = await API.get(`/conversations/user/${user.uid}`);
-      setConversations(Array.isArray(response.data) ? response.data : []);
-    } catch (error) {
-      console.error("Error fetching conversations:", error);
-      setConversations([]);
-    }
-  };
-
-  const fetchStudents = async () => {
-    try {
-      const response = await API.get('/students');
-      setStudents(Array.isArray(response.data) ? response.data : []);
-    } catch (error) {
-      console.error('Error fetching students:', error);
-      setStudents([]);
-    }
-  };
-
-  const fetchOrganizationMembers = async () => {
-    try {
-      if (!user?.email) return;
-
-      const response = await API.get(
-        `/organizations/email/${encodeURIComponent(user.email)}/members`
-      );
-      setOrganizationMembers(
-        Array.isArray(response?.data?.members) ? response.data.members : []
-      );
-    } catch (error) {
-      console.error('Error fetching organization members:', error);
-      setOrganizationMembers([]);
-    }
-  };
-
-  const fetchAllOrganizations = async () => {
-    try {
-      const response = await API.get("/organizations");
-      const organizationsData = Array.isArray(response.data) ? response.data : [];
-
-      const filtered = organizationsData.filter(
-        (org) => String(org._id) !== String(currentUserObjectId)
-      );
-
-      setAllOrganizations(filtered);
-    } catch (error) {
-      console.error("Error fetching organizations:", error);
-      setAllOrganizations([]);
-    }
-  };
-
-  const fetchMessages = async (conversationId) => {
-    try {
-      const response = await API.get(`/conversations/${conversationId}/messages`);
-      setMessages(Array.isArray(response.data) ? response.data : []);
-
-      const socket = socketService.getSocket();
-      if (socket && conversationId && currentUserObjectId) {
-        socket.emit("mark_as_read", {
-          conversationId,
-          userId: currentUserObjectId,
-        });
-      }
-    } catch (error) {
-      console.error("Error fetching messages:", error);
-      setMessages([]);
-    }
-  };
+  const { data: messageSeed = [] } = useQuery({
+    queryKey: ['organization-communication-messages', selectedConversation?._id],
+    enabled: Boolean(selectedConversation?._id),
+    queryFn: async () => {
+      const response = await API.get(`/conversations/${selectedConversation._id}/messages`);
+      return Array.isArray(response?.data) ? response.data : [];
+    },
+  });
 
   const joinConversation = (conversationId) => {
     const socket = socketService.getSocket();
@@ -328,24 +309,6 @@ const OrganizationCommunication = () => {
   }, [handleMessageDeliveryUpdated, handleNewMessage, handleMessagesRead, selectedConversation, user?.uid]);
 
   useEffect(() => {
-    const init = async () => {
-      if (!user?.uid) return;
-
-      const objectId = await fetchCurrentUserObjectId();
-      if (!objectId) return;
-
-      await Promise.all([
-        fetchConversations(),
-        fetchStudents(),
-        fetchOrganizationMembers(),
-        fetchAllOrganizations(),
-      ]);
-    };
-
-    init();
-  }, [user]);
-
-  useEffect(() => {
     return () => {
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
@@ -355,14 +318,25 @@ const OrganizationCommunication = () => {
 
   useEffect(() => {
     if (selectedConversation?._id) {
-      fetchMessages(selectedConversation._id);
       joinConversation(selectedConversation._id);
 
       if (isMobile) {
         setMobileView("chat");
       }
     }
-  }, [selectedConversation, currentUserObjectId, isMobile]);
+  }, [selectedConversation, isMobile]);
+
+  useEffect(() => {
+    setMessages(messageSeed);
+
+    const socket = socketService.getSocket();
+    if (socket && selectedConversation?._id && currentUserObjectId) {
+      socket.emit('mark_as_read', {
+        conversationId: selectedConversation._id,
+        userId: currentUserObjectId,
+      });
+    }
+  }, [messageSeed, selectedConversation?._id, currentUserObjectId]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -396,6 +370,7 @@ const OrganizationCommunication = () => {
         const exists = prev.find((conv) => String(conv._id) === String(conversation._id));
         return exists ? prev : [conversation, ...prev];
       });
+      queryClient.invalidateQueries({ queryKey: ['organization-communication-conversations', user?.uid] });
     } catch (error) {
       console.error("Error starting new chat:", error);
     } finally {
@@ -585,38 +560,78 @@ const OrganizationCommunication = () => {
     });
   };
 
+  const normalizedSearch = searchTerm.toLowerCase();
+
   // Filter conversations for chat tab
   const filteredConversations = conversations.filter((conv) => {
     const other = getOtherParticipant(conv, currentUserObjectId);
     if (!other) return false;
 
     return (
-      other.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      other.meta?.type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      other.meta?.campus?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      other.meta?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      other.meta?.department?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      other.name?.toLowerCase().includes(normalizedSearch) ||
+      other.meta?.type?.toLowerCase().includes(normalizedSearch) ||
+      other.meta?.campus?.toLowerCase().includes(normalizedSearch) ||
+      other.meta?.email?.toLowerCase().includes(normalizedSearch) ||
+      other.meta?.department?.toLowerCase().includes(normalizedSearch) ||
       other.meta?.studentId?.includes(searchTerm)
     );
   });
 
   // Filter members for members tab
   const filteredMembers = organizationMembers.filter(member =>
-    member.studentName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    member.studentEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    member.studentInfo?.department?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    member.studentName?.toLowerCase().includes(normalizedSearch) ||
+    member.studentEmail?.toLowerCase().includes(normalizedSearch) ||
+    member.studentInfo?.department?.toLowerCase().includes(normalizedSearch) ||
     member.studentInfo?.studentId?.includes(searchTerm)
   );
 
   // Filter organizations for organizations tab
   const filteredOrganizationsList = allOrganizations.filter(
     (org) =>
-      org.organization?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      org.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      org.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      org.organization?.type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      org.organization?.campus?.toLowerCase().includes(searchTerm.toLowerCase())
+      org.organization?.name?.toLowerCase().includes(normalizedSearch) ||
+      org.name?.toLowerCase().includes(normalizedSearch) ||
+      org.email?.toLowerCase().includes(normalizedSearch) ||
+      org.organization?.type?.toLowerCase().includes(normalizedSearch) ||
+      org.organization?.campus?.toLowerCase().includes(normalizedSearch)
   );
+
+  const filteredModalStudents = students
+    .filter((student) => !organizationMembers.some((member) => member.studentEmail === student.email))
+    .filter(
+      (student) =>
+        student.name?.toLowerCase().includes(normalizedSearch) ||
+        student.email?.toLowerCase().includes(normalizedSearch) ||
+        student.student?.department?.toLowerCase().includes(normalizedSearch) ||
+        student.student?.studentId?.includes(searchTerm)
+    );
+
+  const filteredModalOrganizations = allOrganizations.filter(
+    (org) =>
+      org.organization?.name?.toLowerCase().includes(normalizedSearch) ||
+      org.name?.toLowerCase().includes(normalizedSearch) ||
+      org.email?.toLowerCase().includes(normalizedSearch)
+  );
+
+  const { visibleItems: visibleConversations, hasMore: hasMoreConversations, loadMoreRef: conversationsLoadMoreRef } = useInfiniteScrollSlice(filteredConversations, {
+    pageSize: 16,
+    resetDeps: [activeTab, searchTerm, filteredConversations.length],
+  });
+  const { visibleItems: visibleMembers, hasMore: hasMoreMembers, loadMoreRef: membersLoadMoreRef } = useInfiniteScrollSlice(filteredMembers, {
+    pageSize: 16,
+    resetDeps: [activeTab, searchTerm, filteredMembers.length],
+  });
+  const { visibleItems: visibleOrganizations, hasMore: hasMoreOrganizations, loadMoreRef: organizationsLoadMoreRef } = useInfiniteScrollSlice(filteredOrganizationsList, {
+    pageSize: 16,
+    resetDeps: [activeTab, searchTerm, filteredOrganizationsList.length],
+  });
+  const { visibleItems: visibleModalStudents, hasMore: hasMoreModalStudents, loadMoreRef: modalStudentsLoadMoreRef } = useInfiniteScrollSlice(filteredModalStudents, {
+    pageSize: 12,
+    resetDeps: [showNewChat, searchTerm, filteredModalStudents.length],
+  });
+  const { visibleItems: visibleModalOrganizations, hasMore: hasMoreModalOrganizations, loadMoreRef: modalOrganizationsLoadMoreRef } = useInfiniteScrollSlice(filteredModalOrganizations, {
+    pageSize: 12,
+    resetDeps: [showNewChat, searchTerm, filteredModalOrganizations.length],
+  });
 
   const getMemberRoleBadge = (member) => {
     if (member.role === 'admin') {
@@ -781,7 +796,7 @@ const OrganizationCommunication = () => {
                 {activeTab === 'chats' && (
                   <div>
                     <AnimatePresence>
-                      {filteredConversations.map((conversation, index) => {
+                      {visibleConversations.map((conversation, index) => {
                         const other = getOtherParticipant(conversation, currentUserObjectId);
                         if (!other) return null;
 
@@ -865,6 +880,11 @@ const OrganizationCommunication = () => {
                           </motion.div>
                         );
                       })}
+                      {hasMoreConversations && (
+                        <div ref={conversationsLoadMoreRef} className="py-3 text-center text-xs text-gray-500">
+                          Loading more conversations...
+                        </div>
+                      )}
                     </AnimatePresence>
 
                     {filteredConversations.length === 0 && (
@@ -894,7 +914,7 @@ const OrganizationCommunication = () => {
                     </div>
 
                     <AnimatePresence>
-                      {filteredMembers.map((member, index) => {
+                      {visibleMembers.map((member, index) => {
                         // Find existing conversation by userId
                         const existingConv = conversations.find((conv) => {
                           const other = getOtherParticipant(conv, currentUserObjectId);
@@ -975,6 +995,11 @@ const OrganizationCommunication = () => {
                           </motion.div>
                         );
                       })}
+                      {hasMoreMembers && (
+                        <div ref={membersLoadMoreRef} className="py-3 text-center text-xs text-gray-500">
+                          Loading more members...
+                        </div>
+                      )}
                     </AnimatePresence>
 
                     {filteredMembers.length === 0 && (
@@ -1004,7 +1029,7 @@ const OrganizationCommunication = () => {
                     </div>
 
                     <AnimatePresence>
-                      {filteredOrganizationsList.map((org, index) => {
+                      {visibleOrganizations.map((org, index) => {
                         // Find existing conversation by userId
                         const existingConv = conversations.find((conv) => {
                           const other = getOtherParticipant(conv, currentUserObjectId);
@@ -1077,6 +1102,11 @@ const OrganizationCommunication = () => {
                           </motion.div>
                         );
                       })}
+                      {hasMoreOrganizations && (
+                        <div ref={organizationsLoadMoreRef} className="py-3 text-center text-xs text-gray-500">
+                          Loading more organizations...
+                        </div>
+                      )}
                     </AnimatePresence>
 
                     {filteredOrganizationsList.length === 0 && (
@@ -1485,64 +1515,57 @@ const OrganizationCommunication = () => {
               </div>
 
               <div className="flex-1 overflow-y-auto">
-                {/* Students Section */}
-                <div className="p-3 bg-gray-50 border-b border-gray-200">
-                  <h4 className="text-sm font-semibold text-gray-700">Students</h4>
-                </div>
-                {students
-                  .filter(student => 
-                    !organizationMembers.some(member => member.studentEmail === student.email)
-                  )
-                  .filter(student =>
-                    student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    student.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    student.student?.department?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    student.student?.studentId?.includes(searchTerm)
-                  )
-                  .map((student) => (
-                  <motion.button
-                    key={student._id}
-                    whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.99 }}
-                    onClick={() => startNewChat(student)}
-                    disabled={loading}
-                    className="w-full p-3 border-b border-gray-100 hover:bg-gray-50 transition-all duration-200 text-left"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <img
-                        src={student.photoURL || `https://ui-avatars.com/api/?name=${student.name}&background=4bbeff&color=fff`}
-                        alt={student.name}
-                        className="w-10 h-10 rounded-xl object-cover"
-                      />
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-gray-900 text-sm text-left">
-                          {student.name}
-                        </h4>
-                        <p className="text-xs text-gray-500 text-left">{student.email}</p>
-                        {student.student && (
-                          <div className="flex items-center gap-2 mt-1">
-                            <GraduationCap className="w-3 h-3 text-gray-400" />
-                            <span className="text-xs text-gray-500">
-                              {student.student.studentId} • {student.student.department}
-                            </span>
-                          </div>
-                        )}
-                      </div>
+                {canReadStudents && (
+                  <>
+                    {/* Students Section */}
+                    <div className="p-3 bg-gray-50 border-b border-gray-200">
+                      <h4 className="text-sm font-semibold text-gray-700">Students</h4>
                     </div>
-                  </motion.button>
-                ))}
+                    {visibleModalStudents.map((student) => (
+                      <motion.button
+                        key={student._id}
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.99 }}
+                        onClick={() => startNewChat(student)}
+                        disabled={loading}
+                        className="w-full p-3 border-b border-gray-100 hover:bg-gray-50 transition-all duration-200 text-left"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <img
+                            src={student.photoURL || `https://ui-avatars.com/api/?name=${student.name}&background=4bbeff&color=fff`}
+                            alt={student.name}
+                            className="w-10 h-10 rounded-xl object-cover"
+                          />
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-gray-900 text-sm text-left">
+                              {student.name}
+                            </h4>
+                            <p className="text-xs text-gray-500 text-left">{student.email}</p>
+                            {student.student && (
+                              <div className="flex items-center gap-2 mt-1">
+                                <GraduationCap className="w-3 h-3 text-gray-400" />
+                                <span className="text-xs text-gray-500">
+                                  {student.student.studentId} • {student.student.department}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </motion.button>
+                    ))}
+                    {hasMoreModalStudents && (
+                      <div ref={modalStudentsLoadMoreRef} className="py-3 text-center text-xs text-gray-500">
+                        Loading more students...
+                      </div>
+                    )}
+                  </>
+                )}
 
                 {/* Organizations Section */}
                 <div className="p-3 bg-gray-50 border-b border-gray-200 mt-2">
                   <h4 className="text-sm font-semibold text-gray-700">Organizations</h4>
                 </div>
-                {allOrganizations
-                  .filter(org =>
-                    org.organization?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    org.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    org.email?.toLowerCase().includes(searchTerm.toLowerCase())
-                  )
-                  .map((org) => (
+                {visibleModalOrganizations.map((org) => (
                   <motion.button
                     key={org._id}
                     whileHover={{ scale: 1.01 }}
@@ -1582,10 +1605,13 @@ const OrganizationCommunication = () => {
                     </div>
                   </motion.button>
                 ))}
+                {hasMoreModalOrganizations && (
+                  <div ref={modalOrganizationsLoadMoreRef} className="py-3 text-center text-xs text-gray-500">
+                    Loading more organizations...
+                  </div>
+                )}
 
-                {students.filter(student => 
-                  !organizationMembers.some(member => member.studentEmail === student.email)
-                ).length === 0 && allOrganizations.length === 0 && (
+                {((canReadStudents ? filteredModalStudents.length === 0 : true) && filteredModalOrganizations.length === 0) && (
                   <div className="text-center py-8">
                     <User className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                     <p className="text-gray-500">No users found</p>
