@@ -228,7 +228,7 @@ const Events = () => {
             src={event.cover}
             alt={event.title}
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                  studentId={globalUserInfo._id || globalUserInfo.studentId || globalUserInfo.uid}
+          />
         ) : (
           <div
             className={`w-full h-full bg-gradient-to-br ${getCategoryColor(
