@@ -34,6 +34,16 @@ const Events = () => {
   const { user } = useAuth();
   const { globalUserInfo } = useUserContext();
 
+  const formatOptionLabel = (value, allLabel, replacer = null) => {
+    const text = String(value || "").trim();
+    if (!text || text === "all") {
+      return allLabel;
+    }
+
+    const normalized = replacer ? text.replace(replacer.from, replacer.to) : text;
+    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+  };
+
   const normalizeInterests = (value) => {
     if (Array.isArray(value)) {
       return value.map((interest) => String(interest).trim()).filter(Boolean).join(", ");
@@ -68,12 +78,30 @@ const Events = () => {
 };
 
   // Get unique values for filters
-  const categories = ["all", ...new Set(events.map((event) => event.category))];
+  const categories = [
+    "all",
+    ...new Set(
+      events
+        .map((event) => String(event.category || "").trim())
+        .filter(Boolean)
+    ),
+  ];
   const organizations = [
     "all",
-    ...new Set(events.map((event) => event.organization)),
+    ...new Set(
+      events
+        .map((event) => String(event.organization || "").trim())
+        .filter(Boolean)
+    ),
   ];
-  const types = ["all", ...new Set(events.map((event) => event.type))];
+  const types = [
+    "all",
+    ...new Set(
+      events
+        .map((event) => String(event.type || "").trim())
+        .filter(Boolean)
+    ),
+  ];
 
   // Filter events
   const filteredEvents = events.filter((event) => {
@@ -200,7 +228,7 @@ const Events = () => {
             src={event.cover}
             alt={event.title}
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-          />
+                  studentId={globalUserInfo._id || globalUserInfo.studentId || globalUserInfo.uid}
         ) : (
           <div
             className={`w-full h-full bg-gradient-to-br ${getCategoryColor(
@@ -496,10 +524,10 @@ const Events = () => {
                     >
                       {categories.map((cat) => (
                         <option key={cat} value={cat}>
-                          {cat === "all"
-                            ? "All Categories"
-                            : cat.charAt(0).toUpperCase() +
-                              cat.slice(1).replace("-", " ")}
+                          {formatOptionLabel(cat, "All Categories", {
+                            from: /-/g,
+                            to: " ",
+                          })}
                         </option>
                       ))}
                     </select>
@@ -535,9 +563,7 @@ const Events = () => {
                     >
                       {types.map((type) => (
                         <option key={type} value={type}>
-                          {type === "all"
-                            ? "All Types"
-                            : type.charAt(0).toUpperCase() + type.slice(1)}
+                          {formatOptionLabel(type, "All Types")}
                         </option>
                       ))}
                     </select>
