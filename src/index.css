@@ -1,0 +1,136 @@
+@import "tailwindcss";
+@plugin "daisyui";
+
+:root {
+  --app-primary: #0284c7;
+  --app-primary-hover: #0369a1;
+  --app-text: #0f172a;
+  --app-muted: #475569;
+}
+
+@layer components {
+  .app-surface {
+    @apply bg-white border border-slate-200 rounded-2xl shadow-sm;
+  }
+
+  .section-title-xl {
+    @apply text-2xl md:text-3xl font-bold tracking-tight leading-tight;
+  }
+
+  .section-title-lg {
+    @apply text-xl md:text-2xl font-semibold tracking-tight leading-snug;
+  }
+
+  .section-title-md {
+    @apply text-lg md:text-xl font-semibold tracking-tight leading-snug;
+  }
+
+  .app-btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-sky-600 text-white font-semibold hover:bg-sky-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed;
+  }
+
+  .app-btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-700 font-semibold hover:bg-slate-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed;
+  }
+}
+
+/* Professional Toast Animations */
+.toast-container {
+  position: fixed;
+  z-index: 9999;
+}
+
+/* Custom animation for toast entrance */
+@keyframes professional-slide-in {
+  0% {
+    transform: translateX(100%) scale(0.9);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes professional-slide-out {
+  0% {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100%) scale(0.9);
+    opacity: 0;
+  }
+}
+
+/* Apply custom animations */
+[data-react-hot-toast] {
+  animation: professional-slide-in 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+[data-react-hot-toast].toast-exit {
+  animation: professional-slide-out 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Hover effects */
+[data-react-hot-toast]:hover {
+  transform: translateY(-2px) scale(1.02);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Progress bar styling with theme colors */
+[data-react-hot-toast] > [data-toast-progress] {
+  background: rgba(255, 255, 255, 0.4) !important;
+  height: 3px !important;
+  border-radius: 0 0 16px 16px;
+}
+
+/* Success progress bar - Cyan */
+[data-react-hot-toast][data-type="success"] > [data-toast-progress] {
+  background: linear-gradient(90deg, #22d3ee, #06b6d4) !important;
+}
+
+/* Error progress bar - Red */
+[data-react-hot-toast][data-type="error"] > [data-toast-progress] {
+  background: linear-gradient(90deg, #f87171, #ef4444) !important;
+}
+
+/* Loading progress bar - Blue */
+[data-react-hot-toast][data-type="loading"] > [data-toast-progress] {
+  background: linear-gradient(90deg, #7dd3fc, #0ea5e9) !important;
+  animation: loading-pulse 2s ease-in-out infinite;
+}
+
+@keyframes loading-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* Icon spacing and sizing */
+[data-react-hot-toast] > [data-icon] {
+  margin-right: 12px !important;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
+/* Content improvements */
+[data-react-hot-toast] > [data-content] {
+  padding-right: 8px;
+  word-wrap: break-word;
+}
+
+/* Responsive design */
+@media (max-width: 640px) {
+  .toast-container {
+    right: 16px !important;
+    left: 16px !important;
+    top: 70px !important;
+  }
+  
+  [data-react-hot-toast] {
+    min-width: unset !important;
+    max-width: unset !important;
+    width: 100%;
+  }
+}
