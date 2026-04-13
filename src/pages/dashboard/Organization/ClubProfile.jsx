@@ -99,7 +99,7 @@ const ClubProfile = ({ organization }) => {
     }[activeTab];
 
     return (
-        <div className="min-h-screen  py-8">
+        <div className="min-h-screen py-4 sm:py-6 lg:py-8">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <OrganizationHeader 
                     organization={profileData}
@@ -112,14 +112,14 @@ const ClubProfile = ({ organization }) => {
                 />
                 
                 {/* Tab Navigation */}
-                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 mb-8">
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 mb-6 sm:mb-8 overflow-hidden">
                     <div className="border-b border-gray-200">
-                        <nav className="flex space-x-1 px-6 overflow-x-auto">
+                        <nav className="flex space-x-1 px-3 sm:px-4 lg:px-6 overflow-x-auto snap-x snap-mandatory">
                             {tabs.map(({ id, label, icon: Icon }) => (
                                 <button
                                     key={id}
                                     onClick={() => setActiveTab(id)}
-                                    className={`py-4 px-4 border-b-2 font-semibold text-sm capitalize transition-all whitespace-nowrap flex items-center gap-2 min-w-max ${
+                                    className={`snap-start py-3.5 sm:py-4 px-3 sm:px-4 border-b-2 font-semibold text-sm capitalize transition-all whitespace-nowrap flex items-center gap-2 min-w-max ${
                                         activeTab === id
                                             ? "border-blue-500 text-blue-600 bg-white"
                                             : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -132,7 +132,7 @@ const ClubProfile = ({ organization }) => {
                         </nav>
                     </div>
 
-                    <div className="p-6">
+                    <div className="p-4 sm:p-6 lg:p-7">
                         {ActiveTabComponent && (
                             <ActiveTabComponent
                                 organization={profileData}

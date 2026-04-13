@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import useAuth from "../../../hooks/useAuth";
-import Loading from "../../../components/common/Loading";
 import API from "../../../utils/api";
 import useInfiniteScrollSlice from "../../../hooks/useInfiniteScrollSlice";
 
@@ -48,6 +47,8 @@ const MyApplications = () => {
       return Array.isArray(response?.data) ? response.data : [];
     },
     staleTime: 1000 * 60 * 2,
+    gcTime: 1000 * 60 * 20,
+    refetchOnWindowFocus: false,
   });
 
   const filteredApplications = useMemo(() => {
@@ -131,7 +132,42 @@ const MyApplications = () => {
   };
 
   if (loading) {
-    return <Loading/>
+    return (
+      <div className="space-y-6">
+        <div className="app-surface p-6 animate-pulse">
+          <div className="h-8 w-52 rounded bg-gray-200 mb-3" />
+          <div className="h-4 w-80 rounded bg-gray-200" />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map((item) => (
+            <div key={item} className="app-surface p-6 animate-pulse">
+              <div className="h-12 w-12 rounded-xl bg-gray-200 mx-auto mb-3" />
+              <div className="h-8 w-16 rounded bg-gray-200 mx-auto mb-2" />
+              <div className="h-4 w-24 rounded bg-gray-200 mx-auto" />
+            </div>
+          ))}
+        </div>
+
+        <div className="app-surface p-6 animate-pulse">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="h-11 rounded-xl bg-gray-200" />
+            <div className="h-11 rounded-xl bg-gray-200" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3].map((item) => (
+            <div key={item} className="app-surface p-5 animate-pulse min-h-[260px]">
+              <div className="h-16 w-16 rounded-xl bg-gray-200 mb-4" />
+              <div className="h-6 w-2/3 rounded bg-gray-200 mb-3" />
+              <div className="h-4 w-1/2 rounded bg-gray-200 mb-2" />
+              <div className="h-4 w-3/4 rounded bg-gray-200" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (

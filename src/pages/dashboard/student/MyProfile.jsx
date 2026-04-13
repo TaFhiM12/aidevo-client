@@ -644,22 +644,22 @@ const MyProfile = () => {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-3xl shadow-2xl overflow-hidden mb-8 border border-gray-100"
+        className="bg-white rounded-3xl shadow-2xl overflow-hidden mb-6 sm:mb-8 border border-gray-100"
       >
         {/* Header Background */}
-        <div className="relative h-48 bg-gradient-to-r from-sky-400 via-blue-400 to-cyan-400 overflow-hidden">
+        <div className="relative bg-gradient-to-r from-sky-400 via-blue-400 to-cyan-400 overflow-hidden">
           {/* Pattern Overlay */}
           <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 to-purple-600/20">
             <div className="absolute inset-0 bg-black/10"></div>
           </div>
 
           {/* Main Content */}
-          <div className="relative h-full flex items-center justify-between px-8">
+          <div className="relative flex flex-col gap-6 px-4 py-6 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8 lg:py-8">
             {/* Student Info */}
-            <div className="flex items-center gap-6">
+            <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:gap-6">
               {/* Profile Photo with Edit Overlay */}
               <div className="relative group">
-                <div className="w-32 h-32 bg-white rounded-2xl border-4 border-white shadow-2xl overflow-hidden">
+                <div className="w-24 h-24 sm:w-28 sm:h-28 lg:w-32 lg:h-32 bg-white rounded-2xl border-4 border-white shadow-2xl overflow-hidden">
                   {profileData.photoURL ? (
                     <img
                       src={profileData.photoURL}
@@ -700,7 +700,7 @@ const MyProfile = () => {
                 <motion.h1
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="text-3xl font-bold mb-2"
+                  className="text-2xl sm:text-3xl font-bold mb-2"
                 >
                   {profileData.name || "Student Name"}
                 </motion.h1>
@@ -708,7 +708,7 @@ const MyProfile = () => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 }}
-                  className="text-white/90 text-lg mb-3"
+                  className="text-white/90 text-base sm:text-lg mb-3"
                 >
                   {profileData.student?.department
                     ? departments.find(
@@ -720,24 +720,24 @@ const MyProfile = () => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 }}
-                  className="flex flex-wrap gap-4"
+                  className="flex flex-wrap gap-2 sm:gap-3"
                 >
-                  <div className="flex items-center gap-2 bg-white/20 backdrop-blur-lg px-3 py-1 rounded-full">
+                  <div className="flex items-center gap-2 bg-white/20 backdrop-blur-lg px-3 py-1.5 rounded-full">
                     <GraduationCap size={16} />
-                    <span className="text-sm font-medium">
+                    <span className="text-xs sm:text-sm font-medium">
                       ID: {profileData.student?.studentId || "N/A"}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 bg-white/20 backdrop-blur-lg px-3 py-1 rounded-full">
+                  <div className="flex items-center gap-2 bg-white/20 backdrop-blur-lg px-3 py-1.5 rounded-full">
                     <Calendar size={16} />
-                    <span className="text-sm font-medium">
+                    <span className="text-xs sm:text-sm font-medium">
                       Session: {profileData.student?.session || "N/A"}
                     </span>
                   </div>
                   {profileData.student?.verified && (
-                    <div className="flex items-center gap-2 bg-green-500/20 backdrop-blur-lg px-3 py-1 rounded-full">
+                    <div className="flex items-center gap-2 bg-green-500/20 backdrop-blur-lg px-3 py-1.5 rounded-full">
                       <Shield size={16} />
-                      <span className="text-sm font-medium">
+                      <span className="text-xs sm:text-sm font-medium">
                         Verified Student
                       </span>
                     </div>
@@ -747,19 +747,19 @@ const MyProfile = () => {
             </div>
 
             {/* Action Button */}
-            <div className="flex gap-3">
+            <div className="w-full lg:w-auto flex flex-col sm:flex-row gap-3">
               {isEditing ? (
                 <>
                   <button
                     onClick={() => setIsEditing(false)}
-                    className="px-6 py-3 border-2 border-white/50 text-white rounded-xl hover:bg-white/20 transition-all flex items-center gap-2 font-semibold"
+                    className="w-full lg:w-auto px-5 py-2.5 border-2 border-white/50 text-white rounded-xl hover:bg-white/20 transition-all flex items-center justify-center gap-2 font-semibold"
                   >
                     <X size={20} />
                     Cancel
                   </button>
                   <button
                     onClick={() => setIsEditing(false)}
-                    className="px-6 py-3 bg-white text-blue-600 rounded-xl hover:bg-gray-100 transition-all flex items-center gap-2 font-semibold shadow-lg"
+                    className="w-full lg:w-auto px-5 py-2.5 bg-white text-blue-600 rounded-xl hover:bg-gray-100 transition-all flex items-center justify-center gap-2 font-semibold shadow-lg"
                   >
                     <Save size={20} />
                     Save Changes
@@ -768,7 +768,7 @@ const MyProfile = () => {
               ) : (
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="px-6 py-3 bg-white text-blue-600 rounded-xl hover:bg-gray-100 transition-all flex items-center gap-2 font-semibold shadow-lg"
+                  className="w-full lg:w-auto px-5 py-2.5 bg-white text-blue-600 rounded-xl hover:bg-gray-100 transition-all flex items-center justify-center gap-2 font-semibold shadow-lg"
                 >
                   <Edit3 size={20} />
                   Edit Profile
@@ -779,8 +779,8 @@ const MyProfile = () => {
         </div>
 
         {/* Quick Stats Bar */}
-        <div className="px-8 py-6 border-b border-gray-200">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div className="px-4 py-5 sm:px-6 lg:px-8 border-b border-gray-200">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
             <StatItem
               icon={BookOpen}
               label="CGPA"
@@ -812,13 +812,13 @@ const MyProfile = () => {
   };
 
   const StatItem = ({ icon: Icon, label, value, color }) => (
-    <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all">
-      <div className={`p-3 rounded-xl bg-gray-100 ${color}`}>
-        <Icon size={24} />
+    <div className="flex items-center gap-3 p-3 sm:p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all">
+      <div className={`p-2.5 sm:p-3 rounded-xl bg-gray-100 ${color}`}>
+        <Icon size={20} className="sm:w-6 sm:h-6" />
       </div>
       <div>
-        <div className="text-2xl font-bold text-gray-900">{value}</div>
-        <div className="text-sm text-gray-600">{label}</div>
+        <div className="text-xl sm:text-2xl font-bold text-gray-900">{value}</div>
+        <div className="text-xs sm:text-sm text-gray-600">{label}</div>
       </div>
     </div>
   );
@@ -1461,15 +1461,15 @@ const MyProfile = () => {
     };
 
     return (
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
         {/* Sidebar - WIDER VERSION */}
-        <div className="xl:col-span-1 space-y-8">
+        <div className="lg:col-span-4 xl:col-span-3 space-y-6 lg:space-y-8">
           <ContactInfo />
           <SocialLinks />
         </div>
 
         {/* Main Content */}
-        <div className="xl:col-span-3">
+        <div className="lg:col-span-8 xl:col-span-9">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1478,12 +1478,12 @@ const MyProfile = () => {
           >
             {/* Tab Navigation */}
             <div className="border-b border-gray-200 bg-gray-50/50">
-              <nav className="flex space-x-1 px-6 overflow-x-auto">
+              <nav className="flex space-x-1 px-3 sm:px-4 lg:px-6 overflow-x-auto snap-x snap-mandatory">
                 {tabs.map(({ id, label }) => (
                   <button
                     key={id}
                     onClick={() => setActiveTab(id)}
-                    className={`py-5 px-4 border-b-2 font-semibold text-base capitalize transition-all whitespace-nowrap min-w-max ${
+                    className={`snap-start py-4 px-3 sm:px-4 border-b-2 font-semibold text-sm sm:text-base capitalize transition-all whitespace-nowrap min-w-max ${
                       activeTab === id
                         ? "border-blue-500 text-blue-600 bg-white shadow-sm"
                         : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -1496,7 +1496,7 @@ const MyProfile = () => {
             </div>
 
             {/* Tab Content */}
-            <div className="p-8">
+            <div className="p-4 sm:p-6 lg:p-8">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={activeTab}
@@ -1530,7 +1530,7 @@ const MyProfile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-4 sm:py-6 lg:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <StudentHeader />
         <StudentContent />
