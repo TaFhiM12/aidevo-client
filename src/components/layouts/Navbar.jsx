@@ -110,6 +110,8 @@ const Navbar = () => {
     });
   };
 
+  // console.log(userInfo)
+
   return (
     <nav className="bg-white top-0 z-50 ">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
