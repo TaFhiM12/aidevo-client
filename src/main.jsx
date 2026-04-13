@@ -2,75 +2,89 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import { RouterProvider } from "react-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { router } from "./routes/routes.jsx";
 import AuthProvider from "./context/AuthProvider.jsx";
 import { Toaster } from "react-hot-toast";
 import { UserProvider } from "./context/UserContext.jsx";
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5,
+      gcTime: 1000 * 60 * 30,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
+
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <UserProvider>
-      <AuthProvider>
-        <RouterProvider router={router} />
+    <QueryClientProvider client={queryClient}>
+      <UserProvider>
+        <AuthProvider>
+          <RouterProvider router={router} />
 
-        <Toaster
-          position="top-right"
-          gutter={10}
-          containerStyle={{
-            top: 76,
-            right: 16,
-          }}
-          toastOptions={{
-            style: {
-              background: "#ffffff",
-              color: "#0f172a",
-              borderRadius: "12px",
-              padding: "12px 14px",
-              fontWeight: "500",
-              fontSize: "14px",
-              lineHeight: "1.4",
-              boxShadow: "0 8px 24px rgba(15, 23, 42, 0.08)",
-              border: "1px solid #e2e8f0",
-              maxWidth: "360px",
-            },
-
-            duration: 4000,
-
-            success: {
-              duration: 3500,
-              iconTheme: {
-                primary: "#059669",
-                secondary: "#ffffff"
-              },
+          <Toaster
+            position="top-right"
+            gutter={10}
+            containerStyle={{
+              top: 76,
+              right: 16,
+            }}
+            toastOptions={{
               style: {
-                borderLeft: "4px solid #059669",
+                background: "#ffffff",
+                color: "#0f172a",
+                borderRadius: "12px",
+                padding: "12px 14px",
+                fontWeight: "500",
+                fontSize: "14px",
+                lineHeight: "1.4",
+                boxShadow: "0 8px 24px rgba(15, 23, 42, 0.08)",
+                border: "1px solid #e2e8f0",
+                maxWidth: "360px",
               },
-            },
 
-            error: {
-              duration: 4500,
-              iconTheme: {
-                primary: "#dc2626",
-                secondary: "#ffffff"
-              },
-              style: {
-                borderLeft: "4px solid #dc2626",
-              },
-            },
+              duration: 4000,
 
-            loading: {
-              duration: Infinity,
-              iconTheme: {
-                primary: "#0284c7",
-                secondary: "#e0f2fe",
+              success: {
+                duration: 3500,
+                iconTheme: {
+                  primary: "#059669",
+                  secondary: "#ffffff"
+                },
+                style: {
+                  borderLeft: "4px solid #059669",
+                },
               },
-              style: {
-                borderLeft: "4px solid #0284c7",
+
+              error: {
+                duration: 4500,
+                iconTheme: {
+                  primary: "#dc2626",
+                  secondary: "#ffffff"
+                },
+                style: {
+                  borderLeft: "4px solid #dc2626",
+                },
               },
-            },
-          }}
-        />
-      </AuthProvider>
-    </UserProvider>
+
+              loading: {
+                duration: Infinity,
+                iconTheme: {
+                  primary: "#0284c7",
+                  secondary: "#e0f2fe",
+                },
+                style: {
+                  borderLeft: "4px solid #0284c7",
+                },
+              },
+            }}
+          />
+        </AuthProvider>
+      </UserProvider>
+    </QueryClientProvider>
   </StrictMode>
 );

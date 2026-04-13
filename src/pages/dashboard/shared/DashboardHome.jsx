@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { motion } from "framer-motion";
 import {
   Briefcase,
@@ -16,7 +16,7 @@ import {
 import { Link } from "react-router";
 import useAuth from "../../../hooks/useAuth";
 import useUserRole from "../../../hooks/useUserRole";
-import API from "../../../utils/api";
+import useDashboardOverview from "../../../hooks/useDashboardOverview";
 import Loading from "../../../components/common/Loading";
 
 const StatCard = ({ title, value, icon: Icon, tone }) => {
@@ -48,9 +48,11 @@ const StatCard = ({ title, value, icon: Icon, tone }) => {
 const DashboardHome = () => {
   const { user } = useAuth();
   const { userInfo, loading: roleLoading } = useUserRole();
-  const [dashboard, setDashboard] = useState(null);
-  const [dashboardLoading, setDashboardLoading] = useState(true);
-  const [dashboardError, setDashboardError] = useState("");
+  const {
+    data: dashboard,
+    isLoading: dashboardLoading,
+    error: dashboardError,
+  } = useDashboardOverview(user?.uid);
 
   const formatDate = (value) => {
     if (!value) return "N/A";
@@ -60,30 +62,6 @@ const DashboardHome = () => {
       year: "numeric",
     });
   };
-
-  useEffect(() => {
-    const fetchDashboard = async () => {
-      if (!user?.uid) {
-        setDashboardLoading(false);
-        return;
-      }
-
-      try {
-        setDashboardLoading(true);
-        setDashboardError("");
-
-        const response = await API.get(`/users/dashboard-overview/${user.uid}`);
-        setDashboard(response.data || null);
-      } catch (error) {
-        console.error("Dashboard overview fetch error:", error);
-        setDashboardError(error || "Failed to load dashboard data");
-      } finally {
-        setDashboardLoading(false);
-      }
-    };
-
-    fetchDashboard();
-  }, [user?.uid]);
 
   if (roleLoading || dashboardLoading) {
     return <Loading />;
@@ -106,7 +84,7 @@ const DashboardHome = () => {
 
       {dashboardError && (
         <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-700 text-sm">
-          {dashboardError}
+          {String(dashboardError || "Failed to load dashboard data")}
         </div>
       )}
 

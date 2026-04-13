@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { Bell, Search, Command, Loader2 } from "lucide-react";
 import { useNotifications } from "../../../context/NotificationContext";
-import API from "../../../utils/api";
+import useDashboardOverview from "../../../hooks/useDashboardOverview";
 
 const TopBar = ({ sidebarOpen, setSidebarOpen, userInfo, user }) => {
   const navigate = useNavigate();
@@ -15,6 +15,7 @@ const TopBar = ({ sidebarOpen, setSidebarOpen, userInfo, user }) => {
   const [selectedResultIndex, setSelectedResultIndex] = useState(0);
   const searchContainerRef = useRef(null);
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const { data: dashboardData } = useDashboardOverview(user?.uid);
 
   const recentNotifications = useMemo(
     () => notifications.slice(0, 8),
@@ -261,9 +262,7 @@ const TopBar = ({ sidebarOpen, setSidebarOpen, userInfo, user }) => {
 
       try {
         const dynamicResults = [];
-
-        const dashboardResponse = await API.get(`/users/dashboard-overview/${user?.uid}`);
-        const overview = dashboardResponse?.data?.overview || {};
+        const overview = dashboardData?.overview || {};
 
         if (userInfo?.role === "student") {
           (overview.recentApplications || []).forEach((item, index) => {
@@ -352,7 +351,7 @@ const TopBar = ({ sidebarOpen, setSidebarOpen, userInfo, user }) => {
     }, 220);
 
     return () => clearTimeout(timer);
-  }, [isSearchOpen, searchTerm, roleBasedPages, user?.uid, userInfo?.role, notifications]);
+  }, [isSearchOpen, searchTerm, roleBasedPages, userInfo?.role, notifications, dashboardData]);
   
   const getPageName = () => {
     const path = location.pathname.split("/").pop();

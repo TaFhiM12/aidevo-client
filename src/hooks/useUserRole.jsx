@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import useAuth from "./useAuth";
 import { useUserContext } from "../context/UserContext";
 import API from "../utils/api";
@@ -6,71 +7,60 @@ import API from "../utils/api";
 const useUserRole = () => {
   const { user, loading: authLoading, obtainAccessToken } = useAuth();
   const { globalUserInfo, updateGlobalUserInfo, userUpdateKey } = useUserContext();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const enabled = !authLoading && Boolean(user?.email);
 
-  useEffect(() => {
-    const fetchUserRole = async () => {
-      if (authLoading) {
-        return;
-      }
+  const query = useQuery({
+    queryKey: ["user-role", user?.email, userUpdateKey],
+    enabled,
+    queryFn: async () => {
+      await obtainAccessToken(user);
 
-      if (!user?.email) {
-        setLoading(false);
-        return;
-      }
-
-      if (globalUserInfo && globalUserInfo.email === user.email) {
-        setLoading(false);
-        return;
-      }
-
-      setLoading(true);
-      setError(null);
+      const endpoint = `/users/role/${encodeURIComponent(user.email)}`;
 
       try {
-        await obtainAccessToken(user);
-
-        const endpoint = `/users/role/${encodeURIComponent(user.email)}`;
         const res = await API.get(endpoint);
-        updateGlobalUserInfo(res.data);
+        return res?.data || null;
       } catch (err) {
         const message = String(err || "");
 
-        if (message.toLowerCase().includes("unauthorized") && user) {
-          try {
-            await obtainAccessToken(user);
-            const retryRes = await API.get(`/users/role/${encodeURIComponent(user.email)}`);
-            updateGlobalUserInfo(retryRes.data);
-            return;
-          } catch (retryErr) {
-            console.error("Error fetching user role after token refresh:", retryErr);
-            setError(retryErr);
-            updateGlobalUserInfo(null);
-            return;
-          }
+        if (message.toLowerCase().includes("unauthorized")) {
+          await obtainAccessToken(user);
+          const retryRes = await API.get(endpoint);
+          return retryRes?.data || null;
         }
 
-        console.error("Error fetching user role:", err);
-        setError(err);
-        updateGlobalUserInfo(null);
-      } finally {
-        setLoading(false);
+        throw err;
       }
-    };
+    },
+  });
 
-    fetchUserRole();
-  }, [user?.email, userUpdateKey, authLoading]);
+  useEffect(() => {
+    if (!enabled) {
+      updateGlobalUserInfo(null);
+      return;
+    }
+
+    if (query.data) {
+      updateGlobalUserInfo(query.data);
+    }
+  }, [enabled, query.data, updateGlobalUserInfo]);
+
+  useEffect(() => {
+    if (query.error) {
+      console.error("Error fetching user role:", query.error);
+      updateGlobalUserInfo(null);
+    }
+  }, [query.error, updateGlobalUserInfo]);
 
   const refetch = () => {
-    setLoading(true);
     updateGlobalUserInfo(null);
+    query.refetch();
   };
 
   return {
     userInfo: globalUserInfo,
-    loading,
-    error,
+    loading: authLoading || query.isLoading,
+    error: query.error,
     refetch,
   };
 };
