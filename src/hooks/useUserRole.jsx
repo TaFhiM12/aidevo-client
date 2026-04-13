@@ -2,7 +2,17 @@ import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import useAuth from "./useAuth";
 import { useUserContext } from "../context/UserContext";
-import API from "../utils/api";
+
+const ACCESS_USER_INFO_KEY = "aidevo_user_info";
+
+const readCachedUserInfo = () => {
+  try {
+    const raw = localStorage.getItem(ACCESS_USER_INFO_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
 
 const useUserRole = () => {
   const { user, loading: authLoading, obtainAccessToken } = useAuth();
@@ -12,38 +22,19 @@ const useUserRole = () => {
   const query = useQuery({
     queryKey: ["user-role", user?.email, userUpdateKey],
     enabled,
-    retry: (failureCount, error) => {
-      if (error?.message === "AUTH_TOKEN_UNAVAILABLE") {
-        return false;
-      }
-      return failureCount < 1;
-    },
+    retry: false,
     queryFn: async () => {
-      const tokenReady = await obtainAccessToken(user);
-      if (!tokenReady) {
+      const cachedUserInfo = readCachedUserInfo();
+      if (cachedUserInfo?.email === user.email) {
+        return cachedUserInfo;
+      }
+
+      const tokenUser = await obtainAccessToken(user);
+      if (!tokenUser) {
         throw new Error("AUTH_TOKEN_UNAVAILABLE");
       }
 
-      const endpoint = `/users/role/${encodeURIComponent(user.email)}`;
-
-      try {
-        const res = await API.get(endpoint);
-        return res?.data || null;
-      } catch (err) {
-        const statusCode = err?.status;
-        const message = String(err?.message || err || "");
-
-        if (statusCode === 401 || message.toLowerCase().includes("unauthorized")) {
-          const refreshed = await obtainAccessToken(user, { forceRefresh: true });
-          if (!refreshed) {
-            throw new Error("AUTH_TOKEN_UNAVAILABLE");
-          }
-          const retryRes = await API.get(endpoint);
-          return retryRes?.data || null;
-        }
-
-        throw err;
-      }
+      return tokenUser || null;
     },
   });
 
@@ -62,6 +53,8 @@ const useUserRole = () => {
     if (query.error) {
       if (query.error?.message !== "AUTH_TOKEN_UNAVAILABLE") {
         console.error("Error fetching user role:", query.error);
+      } else {
+        console.warn("Role fetch delayed while waiting for backend token readiness.");
       }
       updateGlobalUserInfo(null);
     }

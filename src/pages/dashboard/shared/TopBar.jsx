@@ -33,6 +33,7 @@ const TopBar = ({ sidebarOpen, setSidebarOpen, userInfo, user }) => {
   };
 
   const roleBasedPages = useMemo(() => {
+    const role = userInfo?.role || "user";
     const common = [
       {
         id: "page-dashboard",
@@ -157,9 +158,10 @@ const TopBar = ({ sidebarOpen, setSidebarOpen, userInfo, user }) => {
       },
     ];
 
-    if (userInfo?.role === "student") return [...common, ...studentPages];
-    if (userInfo?.role === "organization") return [...common, ...organizationPages];
-    return [...common, ...adminPages];
+    if (role === "student") return [...common, ...studentPages];
+    if (role === "organization") return [...common, ...organizationPages];
+    if (role === "super-admin") return [...common, ...adminPages];
+    return common;
   }, [userInfo?.role]);
 
   const scoreResult = (item, query) => {
@@ -396,7 +398,7 @@ const TopBar = ({ sidebarOpen, setSidebarOpen, userInfo, user }) => {
 
   const getUserDisplayName = () => {
     if (userInfo?.role === 'organization') {
-      return userInfo.organizationName || 'Organization';
+      return user?.displayName || userInfo?.organizationName || userInfo?.name || 'Organization';
     } else if (userInfo?.role === 'admin' || userInfo?.role === 'student') {
       return user?.displayName || userInfo?.name || 'User';
     } else {
@@ -407,6 +409,7 @@ const TopBar = ({ sidebarOpen, setSidebarOpen, userInfo, user }) => {
   const getUserRole = () => {
     return userInfo?.role || 'user';
   };
+  const avatarUrl = user?.photoURL || userInfo?.photoURL || '/default-avatar.png';
 
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-[17.5px]">
@@ -519,7 +522,7 @@ const TopBar = ({ sidebarOpen, setSidebarOpen, userInfo, user }) => {
               </p>
             </div>
             <img
-              src={userInfo?.photoURL || user?.photoURL || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face"}
+              src={avatarUrl}
               alt="Profile"
               className="w-8 h-8 rounded-lg object-cover"
             />

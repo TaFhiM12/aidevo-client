@@ -13,10 +13,16 @@ const CombinedDashboard = () => {
   const navigate = useNavigate();
   const { userInfo, loading: roleLoading, error, refetch } = useUserRole();
 
-  const isLoading = authLoading || roleLoading;
+  const shellUserInfo = userInfo || {
+    uid: user?.uid || "",
+    email: user?.email || "",
+    name: user?.displayName || "User",
+    photoURL: user?.photoURL || "",
+    role: "user",
+  };
 
-  if (isLoading) {
-    return <Loading/>
+  if (authLoading) {
+    return <Loading />;
   }
 
   if (error || !userInfo) {
@@ -55,7 +61,7 @@ const CombinedDashboard = () => {
     <div className="flex h-screen bg-gray-50">
       <SideBar 
         sidebarOpen={sidebarOpen} 
-        userInfo={userInfo} 
+        userInfo={shellUserInfo} 
         user={user}
         logOut={logOut}
       />
@@ -69,12 +75,37 @@ const CombinedDashboard = () => {
         <TopBar 
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
-          userInfo={userInfo}
+          userInfo={shellUserInfo}
           user={user}
         />
         
         <main className="flex-1 overflow-auto p-6">
-          <Outlet />
+          {roleLoading ? (
+            <div className="space-y-4">
+              <div className="app-surface p-6 animate-pulse">
+                <div className="h-8 w-48 rounded bg-gray-200 mb-3" />
+                <div className="h-4 w-80 rounded bg-gray-200" />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                {[1, 2, 3, 4].map((item) => (
+                  <div key={item} className="app-surface p-5 animate-pulse">
+                    <div className="h-4 w-24 rounded bg-gray-200 mb-4" />
+                    <div className="h-8 w-20 rounded bg-gray-200" />
+                  </div>
+                ))}
+              </div>
+              <div className="app-surface p-6 animate-pulse min-h-[320px]">
+                <div className="h-4 w-36 rounded bg-gray-200 mb-4" />
+                <div className="space-y-3">
+                  {[1, 2, 3].map((item) => (
+                    <div key={item} className="h-12 rounded bg-gray-200" />
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <Outlet />
+          )}
         </main>
       </div>
     </div>

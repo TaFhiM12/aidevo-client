@@ -354,6 +354,7 @@ const MyProfile = () => {
   const [interestInput, setInterestInput] = useState("");
   const { user } = useAuth();
   const { updateGlobalUserInfo } = useUserContext();
+  const { updateProfileUser } = useAuth();
 
   const fileInputRef = useRef(null);
 
@@ -611,6 +612,11 @@ const MyProfile = () => {
       if (response.success) {
         setProfileData((prev) => ({ ...prev, photoURL: imageUrl }));
         updateGlobalUserInfo({ photoURL: imageUrl });
+        try {
+          await updateProfileUser({ photoURL: imageUrl });
+        } catch (firebaseError) {
+          console.error("Failed to sync Firebase photoURL:", firebaseError);
+        }
         toast.success("Profile photo updated successfully!", {
           id: uploadToast,
         });

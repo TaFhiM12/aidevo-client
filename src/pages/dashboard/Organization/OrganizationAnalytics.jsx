@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
     Activity,
     Calendar,
@@ -12,7 +13,6 @@ import {
 import useAuth from "../../../hooks/useAuth";
 import useUserRole from "../../../hooks/useUserRole";
 import API from "../../../utils/api";
-import Loading from "../../../components/common/Loading";
 
 const Card = ({ label, value, icon: Icon }) => (
     <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
@@ -27,38 +27,30 @@ const Card = ({ label, value, icon: Icon }) => (
 const OrganizationAnalytics = () => {
     const { user } = useAuth();
     const { userInfo } = useUserRole();
-    const [loading, setLoading] = useState(true);
-    const [dashboard, setDashboard] = useState(null);
-    const [payments, setPayments] = useState([]);
 
-    useEffect(() => {
-        const fetchAnalytics = async () => {
-            if (!user?.uid || !userInfo?.email) {
-                setLoading(false);
-                return;
-            }
+    const { data: dashboard = null, isLoading: dashboardLoading } = useQuery({
+        queryKey: ["organization-analytics-overview", user?.uid],
+        enabled: Boolean(user?.uid),
+        queryFn: async () => {
+            const response = await API.get(`/users/dashboard-overview/${user.uid}`);
+            return response?.data || null;
+        },
+        staleTime: 1000 * 60 * 5,
+        gcTime: 1000 * 60 * 20,
+        refetchOnWindowFocus: false,
+    });
 
-            try {
-                setLoading(true);
-
-                const [overviewRes, paymentsRes] = await Promise.all([
-                    API.get(`/users/dashboard-overview/${user.uid}`),
-                    API.get(`/payments/organization/${encodeURIComponent(userInfo.email)}`),
-                ]);
-
-                setDashboard(overviewRes?.data || null);
-                setPayments(Array.isArray(paymentsRes?.data) ? paymentsRes.data : []);
-            } catch (error) {
-                console.error("Analytics load failed:", error);
-                setDashboard(null);
-                setPayments([]);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchAnalytics();
-    }, [user?.uid, userInfo?.email]);
+    const { data: payments = [], isLoading: paymentsLoading } = useQuery({
+        queryKey: ["organization-analytics-payments", userInfo?.email],
+        enabled: Boolean(userInfo?.email),
+        queryFn: async () => {
+            const response = await API.get(`/payments/organization/${encodeURIComponent(userInfo.email)}`);
+            return Array.isArray(response?.data) ? response.data : [];
+        },
+        staleTime: 1000 * 60 * 5,
+        gcTime: 1000 * 60 * 20,
+        refetchOnWindowFocus: false,
+    });
 
     const stats = dashboard?.stats || {};
     const overview = dashboard?.overview || {};
@@ -89,8 +81,35 @@ const OrganizationAnalytics = () => {
         };
     }, [stats, payments, overview.recentApplications, attendanceAnalytics]);
 
-    if (loading) {
-        return <Loading />;
+    if (dashboardLoading || paymentsLoading) {
+        return (
+            <div className="space-y-6">
+                <div className="app-surface p-6 animate-pulse">
+                    <div className="h-8 w-64 rounded bg-gray-200 mb-3" />
+                    <div className="h-4 w-96 rounded bg-gray-200" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                    {[1, 2, 3, 4].map((item) => (
+                        <div key={item} className="app-surface p-5 animate-pulse">
+                            <div className="h-4 w-28 rounded bg-gray-200 mb-4" />
+                            <div className="h-8 w-20 rounded bg-gray-200" />
+                        </div>
+                    ))}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {[1, 2].map((item) => (
+                        <div key={item} className="app-surface p-5 animate-pulse min-h-[220px]">
+                            <div className="h-6 w-48 rounded bg-gray-200 mb-4" />
+                            <div className="space-y-3">
+                                {[1, 2, 3].map((row) => (
+                                    <div key={row} className="h-10 rounded bg-gray-200" />
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
     }
 
     return (

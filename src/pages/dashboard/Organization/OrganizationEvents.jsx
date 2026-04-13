@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 
 import {
@@ -23,18 +23,16 @@ import useUserRole from "../../../hooks/useUserRole";
 import AssociationEventDetails from "./shared/AssociationEventDetails";
 import ClubEventDetails from "./shared/ClubEventDetails";
 import SocialServiceEventDetails from "./shared/SocialServiceEventDetails";
-import Loading from "../../../components/common/Loading";
 import API from "../../../utils/api";
 import useInfiniteScrollSlice from "../../../hooks/useInfiniteScrollSlice";
 
 const OrganizationEvents = () => {
   const { userInfo } = useUserRole();
+  const queryClient = useQueryClient();
   const email = userInfo?.email;
   const type = userInfo?.type;
   // const organizationName = userInfo?.organization?.name || userInfo?.name;
 
-  const [events, setEvents] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
@@ -48,7 +46,7 @@ const OrganizationEvents = () => {
   const [removingParticipantMap, setRemovingParticipantMap] = useState({});
 
   const {
-    data: queriedEvents = [],
+    data: queriedEvents,
     isLoading,
   } = useQuery({
     queryKey: ["organization-events", email],
@@ -59,15 +57,12 @@ const OrganizationEvents = () => {
       return allEvents.filter((event) => event.organizationEmail === email);
     },
     staleTime: 1000 * 60 * 2,
+    gcTime: 1000 * 60 * 20,
+    refetchOnWindowFocus: false,
   });
 
-  useEffect(() => {
-    setLoading(isLoading);
-  }, [isLoading]);
-
-  useEffect(() => {
-    setEvents(queriedEvents);
-  }, [queriedEvents]);
+  const events = queriedEvents ?? [];
+  const loading = isLoading;
 
 const handleDeleteEvent = async (eventId) => {
   const eventTitle =
@@ -84,9 +79,10 @@ const handleDeleteEvent = async (eventId) => {
     const response = await API.delete(`/events/${eventId}`);
 
     if (response.success) {
-      setEvents((prevEvents) =>
-        prevEvents.filter((event) => event._id !== eventId)
-      );
+      queryClient.setQueryData(["organization-events", email], (currentEvents) => {
+        const nextEvents = Array.isArray(currentEvents) ? currentEvents : [];
+        return nextEvents.filter((event) => event._id !== eventId);
+      });
 
       toast.success("Event deleted successfully!", {
         id: deleteToast,
@@ -120,11 +116,12 @@ const handleStatusUpdate = async (eventId, status) => {
       throw new Error(response.message || "Failed to update event status");
     }
 
-    setEvents((prev) =>
-      prev.map((event) =>
+    queryClient.setQueryData(["organization-events", email], (currentEvents) => {
+      const nextEvents = Array.isArray(currentEvents) ? currentEvents : [];
+      return nextEvents.map((event) =>
         event._id === eventId ? { ...event, status } : event
-      )
-    );
+      );
+    });
 
     toast.success("Event status updated", { id: loadingToast });
   } catch (error) {
@@ -396,8 +393,26 @@ const handleRemoveParticipant = async (participantId) => {
     </motion.div>
   );
 
-  if (loading) {
-    return <Loading />;
+  if (loading && events.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="app-surface p-6 animate-pulse">
+          <div className="h-8 w-56 rounded bg-gray-200 mb-3" />
+          <div className="h-4 w-80 rounded bg-gray-200" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((item) => (
+            <div key={item} className="app-surface p-5 animate-pulse min-h-[420px]">
+              <div className="h-44 rounded-xl bg-gray-200 mb-5" />
+              <div className="h-6 w-3/4 rounded bg-gray-200 mb-3" />
+              <div className="h-4 w-full rounded bg-gray-200 mb-2" />
+              <div className="h-4 w-2/3 rounded bg-gray-200 mb-4" />
+              <div className="h-10 w-full rounded bg-gray-200" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (

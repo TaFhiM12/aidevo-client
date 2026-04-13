@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 import useUserRole from "../../../hooks/useUserRole";
 import API from "../../../utils/api";
-import Loading from "../../../components/common/Loading";
 import useInfiniteScrollSlice from "../../../hooks/useInfiniteScrollSlice";
 
 const OrganizationPayments = () => {
@@ -27,6 +26,9 @@ const OrganizationPayments = () => {
             );
             return Array.isArray(response?.data) ? response.data : [];
         },
+        staleTime: 1000 * 60 * 5,
+        gcTime: 1000 * 60 * 20,
+        refetchOnWindowFocus: false,
     });
 
     const {
@@ -150,7 +152,30 @@ const OrganizationPayments = () => {
         };
 
     if (loading) {
-        return <Loading />;
+        return (
+            <div className="space-y-6">
+                <div className="app-surface p-6 animate-pulse">
+                    <div className="h-8 w-44 rounded bg-gray-200 mb-3" />
+                    <div className="h-4 w-80 rounded bg-gray-200" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                    {[1, 2, 3, 4].map((item) => (
+                        <div key={item} className="app-surface p-5 animate-pulse">
+                            <div className="h-4 w-24 rounded bg-gray-200 mb-4" />
+                            <div className="h-8 w-24 rounded bg-gray-200" />
+                        </div>
+                    ))}
+                </div>
+                <div className="app-surface p-5 animate-pulse min-h-[280px]">
+                    <div className="h-6 w-56 rounded bg-gray-200 mb-4" />
+                    <div className="space-y-3">
+                        {[1, 2, 3, 4].map((row) => (
+                            <div key={row} className="h-12 rounded bg-gray-200" />
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     return (

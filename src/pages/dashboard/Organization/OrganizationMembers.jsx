@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
 import API from "../../../utils/api";
 import useUserRole from "../../../hooks/useUserRole";
-import Loading from "../../../components/common/Loading";
 import toast from "react-hot-toast";
 import useInfiniteScrollSlice from "../../../hooks/useInfiniteScrollSlice";
 
@@ -37,6 +36,8 @@ const OrganizationMembers = () => {
             };
         },
         staleTime: 1000 * 60 * 3,
+        gcTime: 1000 * 60 * 20,
+        refetchOnWindowFocus: false,
     });
 
     const members = data?.members || [];
@@ -133,7 +134,30 @@ const OrganizationMembers = () => {
     };
 
     if (roleLoading || loading) {
-        return <Loading />;
+        return (
+            <div className="space-y-6">
+                <div className="app-surface p-6 animate-pulse">
+                    <div className="h-8 w-60 rounded bg-gray-200 mb-3" />
+                    <div className="h-4 w-96 rounded bg-gray-200 mb-4" />
+                    <div className="h-11 w-full rounded-xl bg-gray-200" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {[1, 2, 3].map((item) => (
+                        <div key={item} className="app-surface p-4 animate-pulse">
+                            <div className="h-4 w-24 rounded bg-gray-200 mb-3" />
+                            <div className="h-8 w-20 rounded bg-gray-200" />
+                        </div>
+                    ))}
+                </div>
+                <div className="app-surface p-5 animate-pulse min-h-[280px]">
+                    <div className="space-y-3">
+                        {[1, 2, 3, 4, 5].map((row) => (
+                            <div key={row} className="h-12 rounded bg-gray-200" />
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     return (

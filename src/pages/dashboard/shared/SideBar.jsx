@@ -22,6 +22,7 @@ import toast from "react-hot-toast";
 const SideBar = ({ sidebarOpen, userInfo, user, logOut }) => {
   const getNavItems = () => {
     const commonItems = [{ name: "Dashboard", icon: Home, path: "/dashboard" }];
+    const role = userInfo?.role || "user";
 
     const studentItems = [
       {
@@ -78,7 +79,7 @@ const SideBar = ({ sidebarOpen, userInfo, user, logOut }) => {
       { name: "Settings", icon: Settings, path: "/dashboard/admin-settings" },
     ];
 
-    switch (userInfo.role) {
+    switch (role) {
       case "student":
         return [...commonItems, ...studentItems];
       case "organization":
@@ -93,7 +94,7 @@ const SideBar = ({ sidebarOpen, userInfo, user, logOut }) => {
   const navItems = getNavItems();
 
   const getRoleBadge = () => {
-    switch (userInfo.role) {
+    switch (role) {
       case "student":
         return "Student";
       case "organization":

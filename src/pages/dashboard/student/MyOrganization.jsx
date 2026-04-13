@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router";
 import useAuth from "../../../hooks/useAuth";
+import useUserRole from "../../../hooks/useUserRole";
 import API from "../../../utils/api";
 import useInfiniteScrollSlice from "../../../hooks/useInfiniteScrollSlice";
 
@@ -26,6 +27,7 @@ const MotionDiv = motion.div;
 
 const MyOrganization = () => {
   const { user } = useAuth();
+  const { userInfo } = useUserRole();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState("all");
@@ -36,13 +38,9 @@ const MyOrganization = () => {
     error,
   } = useQuery({
     queryKey: ['my-organizations', user?.email],
-    enabled: Boolean(user?.email),
+    enabled: Boolean(user?.email && userInfo),
     queryFn: async () => {
-      const userInfoResponse = await API.get(
-        `/users/role/${encodeURIComponent(user.email)}`
-      );
-
-      const studentMongoId = userInfoResponse?.data?.studentId;
+      const studentMongoId = userInfo?.studentId || userInfo?._id;
 
       if (!studentMongoId) {
         return [];

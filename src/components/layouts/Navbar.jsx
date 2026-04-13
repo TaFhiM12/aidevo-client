@@ -8,10 +8,30 @@ import useAuth from "../../hooks/useAuth";
 import toast from 'react-hot-toast';
 import useUserRole from "../../hooks/useUserRole";
 
+const ACCESS_USER_INFO_KEY = "aidevo_user_info";
+
+const readCachedUserInfo = () => {
+  try {
+    const raw = localStorage.getItem(ACCESS_USER_INFO_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { user, logOut } = useAuth();
   const { userInfo } = useUserRole();
+  const cachedUserInfo = readCachedUserInfo();
+  const avatarUrl = user?.photoURL || userInfo?.photoURL || cachedUserInfo?.photoURL || '/default-avatar.png';
+  const displayName =
+    user?.displayName ||
+    userInfo?.organizationName ||
+    userInfo?.name ||
+    cachedUserInfo?.organizationName ||
+    cachedUserInfo?.name ||
+    'User';
 
   const handleSignOut = () => {
     const loadingToast = toast.loading(
@@ -172,16 +192,12 @@ const Navbar = () => {
                     className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 transition-colors group cursor-pointer"
                   >
                     <img
-                      src={userInfo?.photoURL || '/default-avatar.png'}
+                      src={avatarUrl}
                       alt="User Avatar"
                       className="w-8 h-8 rounded-full object-cover border-2 border-blue-400 group-hover:border-blue-500"
                     />
                     <span className="text-gray-700 font-medium max-w-32 truncate">
-                      {
-                        userInfo?.role === 'organization'
-                          ? userInfo?.organizationName || 'Organization'
-                          : userInfo?.name || 'User'
-                      }
+                      {displayName}
                     </span>
                   </button>
                   
@@ -201,15 +217,15 @@ const Navbar = () => {
                     className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-semibold overflow-hidden"
                     aria-label="User profile"
                   >
-                    {userInfo?.photoURL ? (
+                    {avatarUrl ? (
                       <img 
-                        src={userInfo.photoURL} 
+                        src={avatarUrl} 
                         alt="User Avatar" 
                         className="w-full h-full object-cover"
                       />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-r from-[#4bbeff] to-[#3aa8e6] rounded-full flex items-center justify-center">
-                        {userInfo?.name ? userInfo.name.charAt(0).toUpperCase() : user.email?.charAt(0).toUpperCase()}
+                        {displayName ? displayName.charAt(0).toUpperCase() : user.email?.charAt(0).toUpperCase()}
                       </div>
                     )}
                   </button>
@@ -247,25 +263,21 @@ const Navbar = () => {
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <div className="flex items-center gap-3 px-2 py-3 bg-blue-50 rounded-lg">
                   <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden">
-                    {userInfo?.photoURL ? (
+                    {avatarUrl ? (
                       <img 
-                        src={userInfo.photoURL} 
+                        src={avatarUrl} 
                         alt="User Avatar" 
                         className="w-full h-full object-cover"
                       />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-r from-[#4bbeff] to-[#3aa8e6] rounded-full flex items-center justify-center text-white font-semibold">
-                        {userInfo?.name ? userInfo.name.charAt(0).toUpperCase() : user.email?.charAt(0).toUpperCase()}
+                        {displayName ? displayName.charAt(0).toUpperCase() : user.email?.charAt(0).toUpperCase()}
                       </div>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-800 truncate">
-                      {
-                        userInfo?.role === 'organization'
-                          ? userInfo?.organizationName || 'Organization'
-                          : userInfo?.name || 'User'
-                      }
+                      {displayName}
                     </p>
                     <p className="text-xs text-gray-600 truncate">
                       {user.email}

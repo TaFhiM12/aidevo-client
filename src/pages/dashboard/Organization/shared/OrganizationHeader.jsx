@@ -28,6 +28,8 @@ import toast from 'react-hot-toast';
 import { uploadToCloudinary } from '../../../../utils/uploadToCloudinary';
 import API from '../../../../utils/api';
 import InlineEditField from './InlineEditField';
+import useAuth from '../../../../hooks/useAuth';
+import { useUserContext } from '../../../../context/UserContext';
 
 const OrganizationHeader = ({ 
     organization, 
@@ -39,6 +41,8 @@ const OrganizationHeader = ({
     onLogoUpdate,
     onCoverUpdate,
 }) => {
+    const { user, updateProfileUser, obtainAccessToken } = useAuth();
+    const { updateGlobalUserInfo } = useUserContext();
     const [uploading, setUploading] = useState(false);
     const [uploadingType, setUploadingType] = useState(null);
     const coverFileInputRef = useRef(null);
@@ -136,6 +140,28 @@ const OrganizationHeader = ({
                 toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} uploaded successfully!`, { 
                     id: uploadToast 
                 });
+
+                if (type === "logo") {
+                    try {
+                        await updateProfileUser({
+                            photoURL: imageUrl,
+                            displayName:
+                                organization?.organization?.name ||
+                                organization?.name ||
+                                user?.displayName ||
+                                "Organization",
+                        });
+
+                        if (user) {
+                            await obtainAccessToken(user, { forceRefresh: true });
+                        }
+
+                        updateGlobalUserInfo({ photoURL: imageUrl });
+                    } catch (firebaseError) {
+                        console.error("Failed to sync organization logo to Firebase:", firebaseError);
+                        toast.error("Logo updated, but Firebase profile sync failed.");
+                    }
+                }
                 
                 if (type === "logo" && onLogoUpdate) {
                     onLogoUpdate(imageUrl);
@@ -299,29 +325,35 @@ const OrganizationHeader = ({
             animate={{ opacity: 1, y: 0 }}
             className="bg-white rounded-3xl shadow-2xl overflow-hidden mb-8 border border-gray-100"
         >
-            {/* Cover Photo Section - INCREASED HEIGHT */}
-            <div className={`relative h-80 md:h-96 lg:h-[28rem] bg-gradient-to-r ${colors.gradient} overflow-hidden`}>
-                {organization.organization.coverPhoto ? (
-                    <div className="absolute inset-0">
-                        <img
-                            src={organization.organization.coverPhoto}
-                            alt="Organization Cover"
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                                e.target.style.display = "none";
-                            }}
-                        />
-                    </div>
-                ) : (
-                    <div className={`w-full h-full bg-gradient-to-r ${colors.gradient}`} />
+            {/* Cover Photo Section */}
+            <div className={`relative h-[320px] md:h-[380px] lg:h-[440px] bg-gradient-to-r ${colors.gradient} overflow-hidden`}>
+                {organization.organization.coverPhoto && (
+                    <div
+                        className="absolute inset-0 bg-center bg-cover bg-no-repeat"
+                        style={{ backgroundImage: `url(${organization.organization.coverPhoto})` }}
+                    />
                 )}
 
-                {/* Enhanced Gradient Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent" />
+                {/* Layered overlays for readability */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/20" />
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(255,255,255,0.16),transparent_45%),radial-gradient(ellipse_at_bottom_left,rgba(0,0,0,0.32),transparent_55%)]" />
 
                 <div className="absolute inset-0 flex flex-col justify-between">
-                    {/* Top Section - Verified Badge */}
-                    <div className="flex-0 p-4 sm:p-6 lg:p-8">
+                    {/* Top Section */}
+                    <div className="flex items-start justify-between p-4 sm:p-6 lg:p-8">
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                            <span className="inline-flex items-center gap-2 rounded-full border border-white/35 bg-white/15 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-md">
+                                <Building2 size={14} className="opacity-90" />
+                                {organization.organization.type || "Organization"}
+                            </span>
+                            {organization.organization.roleType && (
+                                <span className="inline-flex items-center gap-2 rounded-full border border-white/35 bg-white/15 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-md">
+                                    <Award size={14} className="opacity-90" />
+                                    {organization.organization.roleType}
+                                </span>
+                            )}
+                        </div>
+
                         {organization.organization.verified && (
                             <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-2xl backdrop-blur-sm border border-white/20 w-fit">
                                 <Shield size={14} className="sm:w-4 sm:h-4" />
@@ -330,14 +362,15 @@ const OrganizationHeader = ({
                         )}
                     </div>
 
-                    {/* Center Content - Organization Identity */}
-                    <div className="flex-1 flex items-end pb-8 sm:pb-12 lg:pb-16 px-4 sm:px-6 lg:px-8">
-                        <div className="w-full max-w-6xl">
+                    {/* Main Identity */}
+                    <div className="flex-1 flex items-end pb-6 sm:pb-8 lg:pb-10 px-4 sm:px-6 lg:px-8">
+                        <div className="w-full max-w-5xl">
+                            <div className="inline-flex max-w-full flex-col gap-4 rounded-2xl border border-white/20 bg-black/25 p-4 sm:p-6 backdrop-blur-md">
                             <motion.h1
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.2 }}
-                                className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-black text-white mb-4 sm:mb-6 leading-tight tracking-tight drop-shadow-2xl"
+                                className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white leading-tight tracking-tight drop-shadow-2xl"
                             >
                                 {organization.organization.name || organization.name || "Organization Name"}
                             </motion.h1>
@@ -347,96 +380,80 @@ const OrganizationHeader = ({
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: 0.3 }}
-                                    className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-white/90 font-light leading-relaxed max-w-3xl sm:max-w-4xl mb-6 sm:mb-8 drop-shadow-lg"
+                                    className="text-base sm:text-lg md:text-xl text-white/90 font-medium leading-relaxed max-w-3xl drop-shadow-lg"
                                 >
                                     {organization.organization.tagline}
                                 </motion.p>
                             )}
 
-                            {/* Stats Bar - Moved to bottom with better spacing */}
+                            {/* Hero Stats */}
                             <motion.div
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.4 }}
-                                className="flex flex-wrap gap-3 sm:gap-4 md:gap-6"
+                                className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-4"
                             >
-                                <div className="flex items-center gap-2 bg-white/20 backdrop-blur-lg text-white px-4 py-3 sm:px-5 sm:py-4 rounded-xl sm:rounded-2xl border border-white/30">
-                                    <div className="p-2 bg-white/20 rounded-lg">
-                                        <Users size={18} className="sm:w-6 sm:h-6 text-white" />
+                                <div className="flex items-center gap-2 rounded-xl border border-white/30 bg-white/15 px-3 py-2.5 text-white backdrop-blur-md sm:px-4 sm:py-3">
+                                    <div className="p-1.5 bg-white/20 rounded-lg">
+                                        <Users size={16} className="sm:w-5 sm:h-5 text-white" />
                                     </div>
-                                    <div className="text-center">
-                                        <div className="text-xl sm:text-2xl md:text-3xl font-bold">
+                                    <div>
+                                        <div className="text-lg sm:text-xl font-bold leading-tight">
                                             {organization.organization.membershipCount || 0}
                                         </div>
-                                        <div className="text-sm sm:text-base font-medium text-white/90">
+                                        <div className="text-xs sm:text-sm font-medium text-white/90">
                                             Members
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-2 bg-white/20 backdrop-blur-lg text-white px-4 py-3 sm:px-5 sm:py-4 rounded-xl sm:rounded-2xl border border-white/30">
-                                    <div className="p-2 bg-white/20 rounded-lg">
-                                        <Calendar size={18} className="sm:w-6 sm:h-6 text-white" />
+                                <div className="flex items-center gap-2 rounded-xl border border-white/30 bg-white/15 px-3 py-2.5 text-white backdrop-blur-md sm:px-4 sm:py-3">
+                                    <div className="p-1.5 bg-white/20 rounded-lg">
+                                        <Calendar size={16} className="sm:w-5 sm:h-5 text-white" />
                                     </div>
-                                    <div className="text-center">
-                                        <div className="text-xl sm:text-2xl md:text-3xl font-bold">
+                                    <div>
+                                        <div className="text-lg sm:text-xl font-bold leading-tight">
                                             {organization.organization.founded
                                                 ? new Date(organization.organization.founded).getFullYear()
                                                 : "N/A"}
                                         </div>
-                                        <div className="text-sm sm:text-base font-medium text-white/90">
+                                        <div className="text-xs sm:text-sm font-medium text-white/90">
                                             Established
                                         </div>
                                     </div>
                                 </div>
 
                                 {organization.organization.campus && (
-                                    <div className="flex items-center gap-2 bg-white/20 backdrop-blur-lg text-white px-4 py-3 sm:px-5 sm:py-4 rounded-xl sm:rounded-2xl border border-white/30">
-                                        <div className="p-2 bg-white/20 rounded-lg">
-                                            <MapPin size={18} className="sm:w-6 sm:h-6 text-white" />
+                                    <div className="flex items-center gap-2 rounded-xl border border-white/30 bg-white/15 px-3 py-2.5 text-white backdrop-blur-md sm:px-4 sm:py-3">
+                                        <div className="p-1.5 bg-white/20 rounded-lg">
+                                            <MapPin size={16} className="sm:w-5 sm:h-5 text-white" />
                                         </div>
-                                        <div className="text-center">
-                                            <div className="text-lg sm:text-xl md:text-2xl font-bold">
+                                        <div>
+                                            <div className="text-sm sm:text-base font-bold leading-tight line-clamp-1">
                                                 {organization.organization.campus}
                                             </div>
-                                            <div className="text-sm sm:text-base font-medium text-white/90">
+                                            <div className="text-xs sm:text-sm font-medium text-white/90">
                                                 Campus
                                             </div>
                                         </div>
                                     </div>
                                 )}
 
-                                {/* <div className="flex items-center gap-2 bg-white/20 backdrop-blur-lg text-white px-4 py-3 sm:px-5 sm:py-4 rounded-xl sm:rounded-2xl border border-white/30">
-                                    <div className="p-2 bg-white/20 rounded-lg">
-                                        <Building2 size={18} className="sm:w-6 sm:h-6 text-white" />
+                                <div className="flex items-center gap-2 rounded-xl border border-white/30 bg-white/15 px-3 py-2.5 text-white backdrop-blur-md sm:px-4 sm:py-3">
+                                    <div className="p-1.5 bg-white/20 rounded-lg">
+                                        <Award size={16} className="sm:w-5 sm:h-5 text-white" />
                                     </div>
-                                    <div className="text-center">
-                                        <div className="text-lg sm:text-xl md:text-2xl font-bold">
-                                            {organization.organization.type || "Organization"}
+                                    <div>
+                                        <div className="text-sm sm:text-base font-bold leading-tight line-clamp-1">
+                                            {organization.organization.roleType || organization.organization.type || "Organization"}
                                         </div>
-                                        <div className="text-sm sm:text-base font-medium text-white/90">
-                                            Type
-                                        </div>
-                                    </div>
-                                </div> */}
-
-                                {/* New Role Type Badge */}
-                                {organization.organization.roleType && (
-                                    <div className="flex items-center gap-2 bg-white/20 backdrop-blur-lg text-white px-4 py-3 sm:px-5 sm:py-4 rounded-xl sm:rounded-2xl border border-white/30">
-                                        <div className="p-2 bg-white/20 rounded-lg">
-                                            <Award size={18} className="sm:w-6 sm:h-6 text-white" />
-                                        </div>
-                                        <div className="text-center">
-                                            <div className="text-lg sm:text-xl md:text-2xl font-bold">
-                                                {organization.organization.roleType}
-                                            </div>
-                                            <div className="text-sm sm:text-base font-medium text-white/90">
-                                                Sub-type
-                                            </div>
+                                        <div className="text-xs sm:text-sm font-medium text-white/90">
+                                            Sub-type
                                         </div>
                                     </div>
-                                )}
+                                </div>
                             </motion.div>
+                            </div>
                         </div>
                     </div>
                 </div>

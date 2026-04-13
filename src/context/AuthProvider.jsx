@@ -7,7 +7,8 @@ import axios from 'axios';
 const googleProvider = new GoogleAuthProvider(); 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
 const ACCESS_TOKEN_KEY = "aidevo_access_token";
-const TOKEN_ATTEMPT_TIMEOUTS = [6000, 10000, 15000];
+const ACCESS_USER_INFO_KEY = "aidevo_user_info";
+const TOKEN_ATTEMPT_TIMEOUTS = [10000, 15000, 20000, 25000];
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -24,8 +25,16 @@ const AuthProvider = ({children}) => {
 
         const forceRefresh = Boolean(options.forceRefresh);
         const existingToken = localStorage.getItem(ACCESS_TOKEN_KEY);
+        const existingUserInfo = localStorage.getItem(ACCESS_USER_INFO_KEY);
         if (existingToken && !forceRefresh) {
-            return true;
+            try {
+                if (existingUserInfo) {
+                  return JSON.parse(existingUserInfo);
+                }
+                // Fall through to refresh so we can restore structured user metadata.
+            } catch {
+                // Fall through to refresh so we can restore structured user metadata.
+            }
         }
 
         if (tokenRequestRef.current) {
@@ -34,6 +43,13 @@ const AuthProvider = ({children}) => {
 
         tokenRequestRef.current = (async () => {
             let lastError = null;
+
+            // Warm up sleeping backend instances before token issuance.
+            try {
+                await axios.get(`${API_BASE_URL}/`, { timeout: 6000 });
+            } catch {
+                // Ignore warm-up errors and continue with token attempts.
+            }
 
             for (let attempt = 0; attempt < TOKEN_ATTEMPT_TIMEOUTS.length; attempt += 1) {
                 try {
@@ -50,9 +66,13 @@ const AuthProvider = ({children}) => {
                     );
 
                     const accessToken = tokenResponse?.data?.data?.accessToken;
+                    const userInfo = tokenResponse?.data?.data?.user || null;
                     if (accessToken) {
                         localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
-                        return true;
+                        if (userInfo) {
+                            localStorage.setItem(ACCESS_USER_INFO_KEY, JSON.stringify(userInfo));
+                        }
+                        return userInfo || true;
                     }
                 } catch (error) {
                     lastError = error;
@@ -63,6 +83,7 @@ const AuthProvider = ({children}) => {
             }
 
             localStorage.removeItem(ACCESS_TOKEN_KEY);
+            localStorage.removeItem(ACCESS_USER_INFO_KEY);
             console.warn(`Failed to obtain token from ${API_BASE_URL}:`, lastError?.message || "Unknown error");
             console.warn('Proceeding without access token. Your app may have limited functionality.');
             return false;
@@ -85,9 +106,13 @@ const AuthProvider = ({children}) => {
         return signInWithEmailAndPassword(auth , email , password);
     }
 
-    const updateProfileUser = (profile) => {
+    const updateProfileUser = async (profile) => {
         setLoading(true);
-        return updateProfile(auth.currentUser, profile);
+        try {
+            return await updateProfile(auth.currentUser, profile);
+        } finally {
+            setLoading(false);
+        }
     }
 
     const signInWithGoogle = () => {
@@ -104,6 +129,7 @@ const AuthProvider = ({children}) => {
             })
             .finally(() => {
                 localStorage.removeItem(ACCESS_TOKEN_KEY);
+                localStorage.removeItem(ACCESS_USER_INFO_KEY);
                 return signOut(auth);
             });
     }
@@ -125,6 +151,7 @@ const AuthProvider = ({children}) => {
                 }
             } else {
                 localStorage.removeItem(ACCESS_TOKEN_KEY);
+                localStorage.removeItem(ACCESS_USER_INFO_KEY);
             }
 
             setLoading(false);

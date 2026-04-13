@@ -39,6 +39,10 @@ const OrganizationCommunication = () => {
   const { userInfo } = useUserRole();
   const queryClient = useQueryClient();
   const canReadStudents = ["super-admin", "superAdmin"].includes(String(userInfo?.role || ""));
+  const currentUserObjectId = useMemo(
+    () => userInfo?.organizationId || userInfo?.studentId || userInfo?._id || null,
+    [userInfo]
+  );
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -67,22 +71,16 @@ const OrganizationCommunication = () => {
 
   const QUICK_REPLIES = ['Hello!', 'Thank you for reaching out', 'Let us coordinate this', 'Can we schedule a meeting?'];
 
-  const { data: currentUserObjectId = null } = useQuery({
-    queryKey: ['organization-communication-user-id', user?.uid],
-    enabled: Boolean(user?.uid),
-    queryFn: async () => {
-      const response = await API.get(`/users/uid/${user.uid}`);
-      return response?.data?._id || null;
-    },
-  });
-
-  const { data: conversationSeed = [] } = useQuery({
+  const { data: conversationSeed } = useQuery({
     queryKey: ['organization-communication-conversations', user?.uid],
     enabled: Boolean(user?.uid),
     queryFn: async () => {
       const response = await API.get(`/conversations/user/${user.uid}`);
       return Array.isArray(response?.data) ? response.data : [];
     },
+    staleTime: 1000 * 60 * 3,
+    gcTime: 1000 * 60 * 20,
+    refetchOnWindowFocus: false,
   });
 
   const { data: students = [] } = useQuery({
@@ -92,6 +90,9 @@ const OrganizationCommunication = () => {
       const response = await API.get('/students');
       return Array.isArray(response?.data) ? response.data : [];
     },
+    staleTime: 1000 * 60 * 3,
+    gcTime: 1000 * 60 * 20,
+    refetchOnWindowFocus: false,
   });
 
   const { data: organizationMembers = [] } = useQuery({
@@ -103,6 +104,9 @@ const OrganizationCommunication = () => {
       );
       return Array.isArray(response?.data?.members) ? response.data.members : [];
     },
+    staleTime: 1000 * 60 * 3,
+    gcTime: 1000 * 60 * 20,
+    refetchOnWindowFocus: false,
   });
 
   const { data: allOrganizations = [] } = useQuery({
@@ -115,10 +119,15 @@ const OrganizationCommunication = () => {
         (org) => String(org._id) !== String(currentUserObjectId)
       );
     },
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 20,
+    refetchOnWindowFocus: false,
   });
 
   useEffect(() => {
-    setConversations(conversationSeed);
+    if (Array.isArray(conversationSeed)) {
+      setConversations(conversationSeed);
+    }
   }, [conversationSeed]);
 
   // Handle window resize
@@ -132,13 +141,16 @@ const OrganizationCommunication = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const { data: messageSeed = [] } = useQuery({
+  const { data: messageSeed } = useQuery({
     queryKey: ['organization-communication-messages', selectedConversation?._id],
     enabled: Boolean(selectedConversation?._id),
     queryFn: async () => {
       const response = await API.get(`/conversations/${selectedConversation._id}/messages`);
       return Array.isArray(response?.data) ? response.data : [];
     },
+    staleTime: 1000 * 30,
+    gcTime: 1000 * 60 * 10,
+    refetchOnWindowFocus: false,
   });
 
   const joinConversation = (conversationId) => {
@@ -327,7 +339,9 @@ const OrganizationCommunication = () => {
   }, [selectedConversation, isMobile]);
 
   useEffect(() => {
-    setMessages(messageSeed);
+    if (Array.isArray(messageSeed)) {
+      setMessages(messageSeed);
+    }
 
     const socket = socketService.getSocket();
     if (socket && selectedConversation?._id && currentUserObjectId) {

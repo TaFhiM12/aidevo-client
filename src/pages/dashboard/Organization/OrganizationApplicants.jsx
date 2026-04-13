@@ -25,7 +25,7 @@ import useInfiniteScrollSlice from "../../../hooks/useInfiniteScrollSlice";
 
 const OrganizationApplicants = () => {
   const { user } = useAuth();
-  const { userInfo, isLoading: roleLoading } = useUserRole();
+  const { userInfo, loading: roleLoading } = useUserRole();
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedApplication, setSelectedApplication] = useState(null);
@@ -54,6 +54,8 @@ const OrganizationApplicants = () => {
       return Array.isArray(response?.data) ? response.data : [];
     },
     staleTime: 1000 * 60 * 2,
+    gcTime: 1000 * 60 * 20,
+    refetchOnWindowFocus: false,
   });
 
   const filteredApplications = useMemo(() => {
@@ -164,10 +166,26 @@ const OrganizationApplicants = () => {
 
   if (roleLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading user information...</p>
+      <div className="space-y-6">
+        <div className="app-surface p-6 animate-pulse">
+          <div className="h-8 w-48 rounded bg-gray-200 mb-3" />
+          <div className="h-4 w-80 rounded bg-gray-200" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map((item) => (
+            <div key={item} className="app-surface p-6 animate-pulse">
+              <div className="h-12 w-12 rounded-xl bg-gray-200 mx-auto mb-3" />
+              <div className="h-8 w-16 rounded bg-gray-200 mx-auto mb-2" />
+              <div className="h-4 w-24 rounded bg-gray-200 mx-auto" />
+            </div>
+          ))}
+        </div>
+        <div className="app-surface p-6 animate-pulse min-h-[300px]">
+          <div className="space-y-3">
+            {[1, 2, 3, 4].map((row) => (
+              <div key={row} className="h-12 rounded bg-gray-200" />
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -175,10 +193,26 @@ const OrganizationApplicants = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading applications...</p>
+      <div className="space-y-6">
+        <div className="app-surface p-6 animate-pulse">
+          <div className="h-8 w-48 rounded bg-gray-200 mb-3" />
+          <div className="h-4 w-80 rounded bg-gray-200" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map((item) => (
+            <div key={item} className="app-surface p-6 animate-pulse">
+              <div className="h-12 w-12 rounded-xl bg-gray-200 mx-auto mb-3" />
+              <div className="h-8 w-16 rounded bg-gray-200 mx-auto mb-2" />
+              <div className="h-4 w-24 rounded bg-gray-200 mx-auto" />
+            </div>
+          ))}
+        </div>
+        <div className="app-surface p-6 animate-pulse min-h-[300px]">
+          <div className="space-y-3">
+            {[1, 2, 3, 4].map((row) => (
+              <div key={row} className="h-12 rounded bg-gray-200" />
+            ))}
+          </div>
         </div>
       </div>
     );

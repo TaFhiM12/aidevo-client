@@ -64,7 +64,34 @@ const DashboardHome = () => {
   };
 
   if (roleLoading || dashboardLoading) {
-    return <Loading />;
+      return (
+        <div className="space-y-6">
+          <div className="app-surface p-6 animate-pulse">
+            <div className="h-8 w-56 rounded bg-gray-200 mb-3" />
+            <div className="h-4 w-80 rounded bg-gray-200" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((item) => (
+              <div key={item} className="app-surface p-5 animate-pulse">
+                <div className="h-4 w-28 rounded bg-gray-200 mb-4" />
+                <div className="h-8 w-20 rounded bg-gray-200" />
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            {[1, 2].map((item) => (
+              <div key={item} className="app-surface p-5 animate-pulse min-h-[280px]">
+                <div className="h-4 w-40 rounded bg-gray-200 mb-4" />
+                <div className="space-y-3">
+                  {[1, 2, 3].map((row) => (
+                    <div key={row} className="h-12 rounded bg-gray-200" />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
   }
 
   const role = dashboard?.role || userInfo?.role;

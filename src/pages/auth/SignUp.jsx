@@ -294,7 +294,10 @@ export default function SignUp() {
 
       await API.post("/users", userData);
       await obtainAccessToken(createdFirebaseUser);
-      await updateProfileUser({ displayName: formData.name, photoURL: userData.photoURL });
+      await updateProfileUser({
+        displayName: role === "organization" ? formData.orgName || formData.name : formData.name,
+        photoURL: userData.photoURL,
+      });
 
       toast.success("Account created successfully!", { id: creatingToast });
       navigate("/dashboard");
