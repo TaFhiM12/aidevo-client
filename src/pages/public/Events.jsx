@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Calendar,
@@ -22,8 +23,6 @@ import EventRecommendationsSection from '../../components/events/EventRecommenda
 import TrendingEventsSection from '../../components/events/TrendingEventsSection';
 
 const Events = () => {
-  const [events, setEvents] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedOrganization, setSelectedOrganization] = useState("all");
@@ -56,52 +55,55 @@ const Events = () => {
       .join(", ");
   };
 
-  useEffect(() => {
-    fetchEvents();
-  }, []);
-
-  const fetchEvents = async () => {
-  try {
-    const response = await API.get("/events");
-
-    if (response.success) {
-      setEvents(Array.isArray(response.data) ? response.data : []);
-    } else {
-      setEvents([]);
-    }
-  } catch (error) {
-    console.error("Error fetching events:", error);
-    setEvents([]);
-  } finally {
-    setLoading(false);
-  }
-};
+  const {
+    data: events = [],
+    isLoading: loading,
+  } = useQuery({
+    queryKey: ["public-events"],
+    queryFn: async () => {
+      const response = await API.get("/events");
+      if (!response?.success) {
+        return [];
+      }
+      return Array.isArray(response.data) ? response.data : [];
+    },
+    staleTime: 1000 * 60 * 3,
+  });
 
   // Get unique values for filters
-  const categories = [
-    "all",
-    ...new Set(
-      events
-        .map((event) => String(event.category || "").trim())
-        .filter(Boolean)
-    ),
-  ];
-  const organizations = [
-    "all",
-    ...new Set(
-      events
-        .map((event) => String(event.organization || "").trim())
-        .filter(Boolean)
-    ),
-  ];
-  const types = [
-    "all",
-    ...new Set(
-      events
-        .map((event) => String(event.type || "").trim())
-        .filter(Boolean)
-    ),
-  ];
+  const categories = useMemo(
+    () => [
+      "all",
+      ...new Set(
+        events
+          .map((event) => String(event.category || "").trim())
+          .filter(Boolean)
+      ),
+    ],
+    [events]
+  );
+  const organizations = useMemo(
+    () => [
+      "all",
+      ...new Set(
+        events
+          .map((event) => String(event.organization || "").trim())
+          .filter(Boolean)
+      ),
+    ],
+    [events]
+  );
+  const types = useMemo(
+    () => [
+      "all",
+      ...new Set(
+        events
+          .map((event) => String(event.type || "").trim())
+          .filter(Boolean)
+      ),
+    ],
+    [events]
+  );
 
   // Filter events
   const filteredEvents = events.filter((event) => {

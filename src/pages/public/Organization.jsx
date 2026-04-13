@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { 
   Search, 
   Users, 
@@ -31,21 +32,14 @@ import toast from 'react-hot-toast';
 const Organization = () => {
   const { user } = useAuth();
   const { userInfo, loading: roleLoading } = useUserRole();
-  const [organizations, setOrganizations] = useState([]);
-  const [filteredOrganizations, setFilteredOrganizations] = useState([]);
-  const [userApplications, setUserApplications] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('all');
   const [selectedCampus, setSelectedCampus] = useState('all');
   const [sortBy, setSortBy] = useState('relevance');
   const [savedOnly, setSavedOnly] = useState(false);
   const [savedOrgIds, setSavedOrgIds] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [applicationsLoading, setApplicationsLoading] = useState(false);
   const [selectedOrganization, setSelectedOrganization] = useState(null);
   const [showApplicationModal, setShowApplicationModal] = useState(false);
-  const [error, setError] = useState('');
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const orgTypes = ['all', 'Club', 'NGO', 'Department', 'Community', 'Society', 'Association'];
   const campuses = ['all', 'Main Campus', 'North Campus', 'South Campus', 'City Campus', 'Online'];
@@ -57,102 +51,90 @@ const Organization = () => {
     { value: 'name-desc', label: 'Name (Z-A)' },
   ];
 
+  const organizationsQuery = useQuery({
+    queryKey: ['organizations-directory'],
+    queryFn: async () => {
+      let organizationsData = [];
+      let eventsData = [];
+
+      try {
+        const [response, eventsResponse] = await Promise.all([
+          API.get('/organizations/with-applications'),
+          API.get('/events'),
+        ]);
+
+        organizationsData = Array.isArray(response?.data) ? response.data : [];
+        eventsData = Array.isArray(eventsResponse?.data) ? eventsResponse.data : [];
+      } catch {
+        const [response, eventsResponse] = await Promise.all([
+          API.get('/organizations'),
+          API.get('/events').catch(() => ({ data: [] })),
+        ]);
+
+        const basicOrganizations = Array.isArray(response?.data) ? response.data : [];
+        eventsData = Array.isArray(eventsResponse?.data) ? eventsResponse.data : [];
+        organizationsData = basicOrganizations.map((org) => ({
+          ...org,
+          applicationCount: 0,
+        }));
+      }
+
+      const now = Date.now();
+
+      const getNextDeadline = (org) => {
+        const orgEmail = String(org?.email || '').toLowerCase();
+        const orgName = String(org?.organization?.name || '').toLowerCase();
+
+        const matchingEvents = eventsData.filter((event) => {
+          const eventOrgEmail = String(event?.organizationEmail || '').toLowerCase();
+          const eventOrgName = String(event?.organization || '').toLowerCase();
+          return eventOrgEmail === orgEmail || eventOrgName === orgName;
+        });
+
+        const candidateDeadlines = matchingEvents
+          .map((event) => event?.registrationDeadline || event?.paymentDeadline || event?.startAt)
+          .filter(Boolean)
+          .map((date) => new Date(date).getTime())
+          .filter((ts) => Number.isFinite(ts) && ts >= now)
+          .sort((a, b) => a - b);
+
+        return candidateDeadlines[0] || null;
+      };
+
+      return organizationsData.map((org) => {
+        const nextDeadlineTs = getNextDeadline(org);
+        return {
+          ...org,
+          nextDeadlineTs,
+          closingSoon: nextDeadlineTs
+            ? nextDeadlineTs - now <= 7 * 24 * 60 * 60 * 1000
+            : false,
+        };
+      });
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const applicationsQuery = useQuery({
+    queryKey: ['student-applications', user?.uid],
+    enabled: Boolean(user?.uid && userInfo?.role === 'student'),
+    queryFn: async () => {
+      const response = await API.get(`/students/${user.uid}/applications`);
+      return Array.isArray(response?.data) ? response.data : [];
+    },
+    staleTime: 1000 * 60 * 2,
+  });
+
+  const organizations = organizationsQuery.data || [];
+  const userApplications = applicationsQuery.data || [];
+  const loading = organizationsQuery.isLoading;
+  const applicationsLoading = applicationsQuery.isLoading;
+  const error = organizationsQuery.error ? 'Failed to load organizations. Please try again.' : '';
+
   const pendingApplications = userApplications.filter((app) => app.status === 'pending').length;
   const approvedApplications = userApplications.filter((app) => app.status === 'approved').length;
 
-  const fetchOrganizations = async () => {
-  try {
-    setLoading(true);
-    setError("");
-
-    let organizationsData = [];
-
-    let eventsData = [];
-
-    try {
-      const [response, eventsResponse] = await Promise.all([
-        API.get("/organizations/with-applications"),
-        API.get('/events')
-      ]);
-      organizationsData = Array.isArray(response.data) ? response.data : [];
-      eventsData = Array.isArray(eventsResponse?.data) ? eventsResponse.data : [];
-    } catch {
-      const [response, eventsResponse] = await Promise.all([
-        API.get("/organizations"),
-        API.get('/events').catch(() => ({ data: [] }))
-      ]);
-      const basicOrganizations = Array.isArray(response.data) ? response.data : [];
-      eventsData = Array.isArray(eventsResponse?.data) ? eventsResponse.data : [];
-
-      organizationsData = basicOrganizations.map((org) => ({
-        ...org,
-        applicationCount: 0,
-      }));
-    }
-
-    const now = Date.now();
-
-    const getNextDeadline = (org) => {
-      const orgEmail = String(org?.email || '').toLowerCase();
-      const orgName = String(org?.organization?.name || '').toLowerCase();
-
-      const matchingEvents = eventsData.filter((event) => {
-        const eventOrgEmail = String(event?.organizationEmail || '').toLowerCase();
-        const eventOrgName = String(event?.organization || '').toLowerCase();
-        return eventOrgEmail === orgEmail || eventOrgName === orgName;
-      });
-
-      const candidateDeadlines = matchingEvents
-        .map((event) => event?.registrationDeadline || event?.paymentDeadline || event?.startAt)
-        .filter(Boolean)
-        .map((date) => new Date(date).getTime())
-        .filter((ts) => Number.isFinite(ts) && ts >= now)
-        .sort((a, b) => a - b);
-
-      return candidateDeadlines[0] || null;
-    };
-
-    const organizationsWithDeadlines = organizationsData.map((org) => {
-      const nextDeadlineTs = getNextDeadline(org);
-      const closingSoon = nextDeadlineTs
-        ? nextDeadlineTs - now <= 7 * 24 * 60 * 60 * 1000
-        : false;
-
-      return {
-        ...org,
-        nextDeadlineTs,
-        closingSoon,
-      };
-    });
-
-    setOrganizations(organizationsWithDeadlines);
-  } catch (error) {
-    console.error("Error fetching organizations:", error);
-    setError("Failed to load organizations. Please try again.");
-    setOrganizations([]);
-  } finally {
-    setLoading(false);
-  }
-};
-
-const fetchUserApplications = useCallback(async () => {
-  if (!user) return;
-
-  try {
-    setApplicationsLoading(true);
-
-    const response = await API.get(`/students/${user.uid}/applications`);
-    const applicationsData = Array.isArray(response.data) ? response.data : [];
-    setUserApplications(applicationsData);
-  } catch (error) {
-    console.error("Error fetching user applications:", error);
-    setUserApplications([]);
-  } finally {
-    setApplicationsLoading(false);
-  }
-}, [user]);
-
-  const filterOrganizations = useCallback(() => {
+  const filteredOrganizations = useMemo(() => {
     let filtered = organizations;
 
     if (searchTerm) {
@@ -196,7 +178,7 @@ const fetchUserApplications = useCallback(async () => {
       );
     }
 
-    setFilteredOrganizations(filtered);
+    return filtered;
   }, [organizations, searchTerm, selectedType, selectedCampus, savedOnly, savedOrgIds, sortBy]);
 
   useEffect(() => {
@@ -216,20 +198,6 @@ const fetchUserApplications = useCallback(async () => {
     localStorage.setItem('saved_org_ids', JSON.stringify(savedOrgIds));
   }, [savedOrgIds]);
 
-  useEffect(() => {
-    fetchOrganizations();
-  }, []);
-
-  useEffect(() => {
-    if (user && userInfo?.role === 'student') {
-      fetchUserApplications();
-    }
-  }, [user, userInfo, refreshTrigger, fetchUserApplications]);
-
-  useEffect(() => {
-    filterOrganizations();
-  }, [filterOrganizations]);
-
   const getUserApplicationStatus = (organizationId) => {
     if (!user || userInfo?.role !== 'student') return null;
     
@@ -248,15 +216,11 @@ const fetchUserApplications = useCallback(async () => {
   const handleApplicationSubmit = async () => {
     setShowApplicationModal(false);
     setSelectedOrganization(null);
-    
-    setRefreshTrigger(prev => prev + 1);
-    
-    setTimeout(() => {
-      fetchOrganizations();
-      if (user && userInfo?.role === 'student') {
-        fetchUserApplications();
-      }
-    }, 500);
+
+    organizationsQuery.refetch();
+    if (user && userInfo?.role === 'student') {
+      applicationsQuery.refetch();
+    }
   };
 
   const toggleSavedOrganization = (organizationId, orgName) => {
