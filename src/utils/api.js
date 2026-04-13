@@ -26,7 +26,11 @@ API.interceptors.response.use(
   (error) => {
     const message =
       error.response?.data?.message || "Something went wrong";
-    return Promise.reject(message);
+    const normalizedError = new Error(message);
+    normalizedError.status = error.response?.status;
+    normalizedError.data = error.response?.data;
+    normalizedError.original = error;
+    return Promise.reject(normalizedError);
   }
 );
 

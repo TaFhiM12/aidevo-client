@@ -12,8 +12,17 @@ const useUserRole = () => {
   const query = useQuery({
     queryKey: ["user-role", user?.email, userUpdateKey],
     enabled,
+    retry: (failureCount, error) => {
+      if (error?.message === "AUTH_TOKEN_UNAVAILABLE") {
+        return false;
+      }
+      return failureCount < 1;
+    },
     queryFn: async () => {
-      await obtainAccessToken(user);
+      const tokenReady = await obtainAccessToken(user);
+      if (!tokenReady) {
+        throw new Error("AUTH_TOKEN_UNAVAILABLE");
+      }
 
       const endpoint = `/users/role/${encodeURIComponent(user.email)}`;
 
@@ -21,10 +30,14 @@ const useUserRole = () => {
         const res = await API.get(endpoint);
         return res?.data || null;
       } catch (err) {
-        const message = String(err || "");
+        const statusCode = err?.status;
+        const message = String(err?.message || err || "");
 
-        if (message.toLowerCase().includes("unauthorized")) {
-          await obtainAccessToken(user);
+        if (statusCode === 401 || message.toLowerCase().includes("unauthorized")) {
+          const refreshed = await obtainAccessToken(user, { forceRefresh: true });
+          if (!refreshed) {
+            throw new Error("AUTH_TOKEN_UNAVAILABLE");
+          }
           const retryRes = await API.get(endpoint);
           return retryRes?.data || null;
         }
@@ -47,7 +60,9 @@ const useUserRole = () => {
 
   useEffect(() => {
     if (query.error) {
-      console.error("Error fetching user role:", query.error);
+      if (query.error?.message !== "AUTH_TOKEN_UNAVAILABLE") {
+        console.error("Error fetching user role:", query.error);
+      }
       updateGlobalUserInfo(null);
     }
   }, [query.error, updateGlobalUserInfo]);
