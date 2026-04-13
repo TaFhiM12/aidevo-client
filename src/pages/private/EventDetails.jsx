@@ -530,7 +530,7 @@ const fetchRelatedEvents = async () => {
                         Tags & Topics
                       </h4>
                       <div className="flex flex-wrap gap-2">
-                        {event.tags.split(",").map((tag, index) => (
+                        {(Array.isArray(event.tags) ? event.tags : event.tags.split(",")).map((tag, index) => (
                           <span
                             key={index}
                             className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors duration-200"

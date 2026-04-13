@@ -18,23 +18,57 @@ const AuthProvider = ({children}) => {
             return null;
         }
 
-        const tokenResponse = await axios.post(
-            `${API_BASE_URL}/auth/token`,
-            {
-                uid: currentUser.uid,
-                email: currentUser.email,
-            },
-            {
-                withCredentials: true,
+        try {
+            const tokenResponse = await axios.post(
+                `${API_BASE_URL}/auth/token`,
+                {
+                    uid: currentUser.uid,
+                    email: currentUser.email,
+                },
+                {
+                    withCredentials: true,
+                    timeout: 5000,
+                }
+            );
+
+            const accessToken = tokenResponse?.data?.data?.accessToken;
+            if (accessToken) {
+                localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
             }
-        );
 
-        const accessToken = tokenResponse?.data?.data?.accessToken;
-        if (accessToken) {
-            localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+            return true;
+        } catch (error) {
+            console.warn(`Failed to obtain token from ${API_BASE_URL}:`, error.message);
+            
+            // Fallback: If on production Render and token fails, try localhost as backup
+            if (API_BASE_URL.includes('render.com') && process.env.NODE_ENV !== 'production') {
+                console.log('Attempting fallback to localhost...');
+                try {
+                    const fallbackResponse = await axios.post(
+                        'http://localhost:4001/auth/token',
+                        {
+                            uid: currentUser.uid,
+                            email: currentUser.email,
+                        },
+                        {
+                            withCredentials: true,
+                            timeout: 3000,
+                        }
+                    );
+                    const accessToken = fallbackResponse?.data?.data?.accessToken;
+                    if (accessToken) {
+                        localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+                    }
+                    return true;
+                } catch (fallbackError) {
+                    console.error('Fallback also failed:', fallbackError.message);
+                }
+            }
+            
+            // Continue without token if all attempts fail
+            console.warn('Proceeding without access token. Your app may have limited functionality.');
+            return false;
         }
-
-        return true;
     }
 
     const createUser = (email , password) => {

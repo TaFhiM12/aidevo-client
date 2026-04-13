@@ -330,8 +330,7 @@ const handleRemoveParticipant = async (participantId) => {
         {/* Tags */}
         {event.tags && (
           <div className="flex flex-wrap gap-1 mb-4 min-h-[36px] content-start">
-            {event.tags
-              .split(",")
+            {(Array.isArray(event.tags) ? event.tags : event.tags.split(","))
               .slice(0, 3)
               .map((tag, index) => (
                 <span
