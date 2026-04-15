@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, Navigate } from "react-router";
 import RootLayout from "../root/RootLayout";
 import Home from "../pages/public/Home";
 import Blog from "../pages/public/Events";
@@ -20,11 +20,11 @@ import MyEnrolledEvents from '../pages/dashboard/student/MyEnrolledEvents';
 import MychatList from '../pages/dashboard/student/MychatList';
 import OrganizationEvents from '../pages/dashboard/Organization/OrganizationEvents';
 import OrganizationMembers from '../pages/dashboard/Organization/OrganizationMembers';
-import OrganizationApplicants from '../pages/dashboard/Organization/OrganizationApplicants';
 import OrganizationCommunication from '../pages/dashboard/Organization/OrganizationCommunication';
 import OrganizationAnalytics from '../pages/dashboard/Organization/OrganizationAnalytics';
 import OrganizationPayments from '../pages/dashboard/Organization/OrganizationPayments';
 import OrganizationSettings from '../pages/dashboard/Organization/OrganizationSettings';
+import OrganizationRecruitment from '../pages/dashboard/Organization/OrganizationRecruitment';
 import OrganizationsManagement from "../pages/dashboard/superAdmin/OrganizationsManagement";
 import UserManagement from "../pages/dashboard/superAdmin/UserManagement";
 import AllAnalytics from "../pages/dashboard/superAdmin/AllAnalytics";
@@ -50,18 +50,14 @@ export const router = createBrowserRouter([
             path: 'events' , element: <Blog/>
         },
         {
-            path:'events/:id' , element: <PrivateRoute>
-                <EventDetails/>
-            </PrivateRoute>
+            path:'events/:id' , element: <EventDetails/>
         },
         {
             path: 'organization' , element: <Organization/>
         },
         {
             path: 'organizations/:id',
-            element: <PrivateRoute>
-                <OrganizationDetails/>
-            </PrivateRoute>
+            element: <OrganizationDetails/>
         },
         {
             path: 'about' , element: <About/>
@@ -123,7 +119,10 @@ export const router = createBrowserRouter([
             path: 'org-members', element: <OrganizationMembers/>
         },
         {
-            path: 'org-applications', element: <OrganizationApplicants/>
+            path: 'org-applications', element: <Navigate to="/dashboard/org-recruitment" replace />
+        },
+        {
+            path: 'org-recruitment', element: <OrganizationRecruitment/>
         },
         {
             path: 'org-chat', element: <OrganizationCommunication/>

@@ -18,14 +18,16 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 import useAuth from "../../../hooks/useAuth";
 import useUserRole from "../../../hooks/useUserRole";
 import API from "../../../utils/api";
 import useInfiniteScrollSlice from "../../../hooks/useInfiniteScrollSlice";
 
-const OrganizationApplicants = () => {
+const OrganizationApplicants = ({ embedded = false, showStats = !embedded }) => {
   const { user } = useAuth();
   const { userInfo, loading: roleLoading } = useUserRole();
+  const organizationMongoId = userInfo?.organizationId || userInfo?._id;
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedApplication, setSelectedApplication] = useState(null);
@@ -44,11 +46,11 @@ const OrganizationApplicants = () => {
     error,
     refetch,
   } = useQuery({
-    queryKey: ["organization-applications", userInfo?.organizationId],
-    enabled: Boolean(user && userInfo?.organizationId),
+    queryKey: ["organization-applications", organizationMongoId],
+    enabled: Boolean(user && organizationMongoId),
     queryFn: async () => {
       const response = await API.get(
-        `/organizations/by-id/${userInfo.organizationId}/applications`
+        `/organizations/by-id/${organizationMongoId}/applications`
       );
 
       return Array.isArray(response?.data) ? response.data : [];
@@ -93,27 +95,34 @@ const OrganizationApplicants = () => {
     resetDeps: [searchTerm, selectedStatus, filteredApplications.length],
   });
 
-  const updateApplicationStatus = async (applicationId, status, notes = "") => {
-  try {
-    const res = await API.patch(
-      `/applications/${applicationId}/status`,
-      { status, notes }
-    );
+  const updateApplicationStatus = async (applicationId, status, notes) => {
+    try {
+      const payload = { status };
+      if (typeof notes === "string") {
+        payload.notes = notes;
+      }
 
-    if (res.success) {
-      refetch();
-    } else {
+      const res = await API.patch(
+        `/applications/${applicationId}/status`,
+        payload
+      );
+
+      if (res.success) {
+        await refetch();
+        return;
+      }
+
       throw new Error(res.message || "Failed to update status");
-    }
-  } catch (error) {
-    console.error("Error updating application status:", error);
-    alert(
-      error?.response?.data?.message ||
+    } catch (error) {
+      console.error("Error updating application status:", error);
+      const message =
+        error?.response?.data?.message ||
         error?.message ||
-        "Failed to update application"
-    );
-  }
-};
+        "Failed to update application";
+      toast.error(message);
+      throw error;
+    }
+  };
 
   const deleteApplication = async (applicationId) => {
   if (!window.confirm("Are you sure you want to delete this application?")) {
@@ -219,21 +228,23 @@ const OrganizationApplicants = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 py-8 px-4">
-      <div className="max-w-7xl mx-auto">
+    <div className={embedded ? "" : "min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 py-8 px-4"}>
+      <div className={embedded ? "space-y-6" : "max-w-7xl mx-auto"}>
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
-        >
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-4">
-            Applications
-          </h1>
-          <p className="text-gray-600 text-lg">
-            Manage student applications for your organization
-          </p>
-        </motion.div>
+        {!embedded && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center mb-8"
+          >
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-4">
+              Applications
+            </h1>
+            <p className="text-gray-600 text-lg">
+              Manage student applications for your organization
+            </p>
+          </motion.div>
+        )}
 
         {/* Error Message */}
         {error && (
@@ -250,36 +261,38 @@ const OrganizationApplicants = () => {
         )}
 
         {/* Stats */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8"
-        >
-          {statusOptions.map((status) => {
-            const Icon = status.icon;
-            const count = applications.filter((app) =>
-              status.value === "all" ? true : app.status === status.value
-            ).length;
+        {showStats && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8"
+          >
+            {statusOptions.map((status) => {
+              const Icon = status.icon;
+              const count = applications.filter((app) =>
+                status.value === "all" ? true : app.status === status.value
+              ).length;
 
-            return (
-              <div
-                key={status.value}
-                className="app-surface p-6 text-center"
-              >
+              return (
                 <div
-                  className={`w-12 h-12 rounded-xl ${getStatusColor(
-                    status.value
-                  )} flex items-center justify-center mx-auto mb-3`}
+                  key={status.value}
+                  className="app-surface p-6 text-center"
                 >
-                  <Icon className="w-6 h-6" />
+                  <div
+                    className={`w-12 h-12 rounded-xl ${getStatusColor(
+                      status.value
+                    )} flex items-center justify-center mx-auto mb-3`}
+                  >
+                    <Icon className="w-6 h-6" />
+                  </div>
+                  <div className="text-2xl font-bold text-gray-900">{count}</div>
+                  <div className="text-sm text-gray-600">{status.label}</div>
                 </div>
-                <div className="text-2xl font-bold text-gray-900">{count}</div>
-                <div className="text-sm text-gray-600">{status.label}</div>
-              </div>
-            );
-          })}
-        </motion.div>
+              );
+            })}
+          </motion.div>
+        )}
 
         {/* Search and Filters */}
         <motion.div
@@ -362,6 +375,10 @@ const OrganizationApplicants = () => {
                     const department =
                       application.studentInfo?.department ||
                       application.department;
+                    const notePreview =
+                      typeof application.notes === "string"
+                        ? application.notes.trim()
+                        : "";
 
                     return (
                       <motion.tr
@@ -394,6 +411,14 @@ const OrganizationApplicants = () => {
                                 <div className="text-sm text-gray-500 flex items-center gap-1">
                                   <Phone className="w-3 h-3" />
                                   {application.phone}
+                                </div>
+                              )}
+                              {notePreview && (
+                                <div
+                                  className="text-xs text-slate-500 mt-1 max-w-[260px] truncate"
+                                  title={notePreview}
+                                >
+                                  Note: {notePreview}
                                 </div>
                               )}
                             </div>
@@ -539,10 +564,32 @@ const OrganizationApplicants = () => {
 // Application Details Modal Component
 const ApplicationDetailsModal = ({ application, onClose, onStatusUpdate }) => {
   const [notes, setNotes] = useState(application.notes || "");
+  const [savingNotes, setSavingNotes] = useState(false);
+  const [noteSavedAt, setNoteSavedAt] = useState(
+    application.notesUpdatedAt ||
+      (application.notes ? application.updatedAt : null)
+  );
 
   const handleStatusUpdate = (status) => {
     onStatusUpdate(application._id, status, notes);
     onClose();
+  };
+
+  const handleSaveNotes = async () => {
+    try {
+      setSavingNotes(true);
+      await onStatusUpdate(application._id, application.status, notes);
+      setNoteSavedAt(new Date().toISOString());
+      toast.success("Notes saved");
+    } catch (error) {
+      toast.error(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Failed to save notes"
+      );
+    } finally {
+      setSavingNotes(false);
+    }
   };
 
   return (
@@ -733,6 +780,11 @@ const ApplicationDetailsModal = ({ application, onClose, onStatusUpdate }) => {
               <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">
                 Notes
               </h3>
+              {noteSavedAt && (
+                <p className="text-xs text-gray-500">
+                  Last updated: {new Date(noteSavedAt).toLocaleString()}
+                </p>
+              )}
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
@@ -753,8 +805,17 @@ const ApplicationDetailsModal = ({ application, onClose, onStatusUpdate }) => {
             Close
           </button>
 
-          {application.status === "pending" && (
-            <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <button
+              onClick={handleSaveNotes}
+              disabled={savingNotes}
+              className="px-6 py-3 text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 transition-all duration-200 font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {savingNotes ? "Saving..." : "Save Notes"}
+            </button>
+
+            {application.status === "pending" && (
+              <>
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -773,8 +834,9 @@ const ApplicationDetailsModal = ({ application, onClose, onStatusUpdate }) => {
                 <CheckCircle className="w-4 h-4" />
                 Approve
               </motion.button>
-            </div>
-          )}
+              </>
+            )}
+          </div>
         </div>
       </motion.div>
     </motion.div>

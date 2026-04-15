@@ -11,6 +11,7 @@ import {
   Calendar,
   Image as ImageIcon,
   AlertCircle,
+  UserPlus,
 } from "lucide-react";
 import API from "../../utils/api";
 import Loading from "../../components/common/Loading";
@@ -35,6 +36,8 @@ const OrganizationDetails = () => {
   const error = data?.error || "";
 
   const organizationInfo = useMemo(() => organization?.organization || {}, [organization]);
+  const recruitment = organizationInfo?.recruitment || {};
+  const recruitmentOpen = recruitment?.isOpen === true;
 
   if (loading) {
     return <Loading />;
@@ -144,6 +147,31 @@ const OrganizationDetails = () => {
                   {organizationInfo.description ||
                     "This organization is actively involved in student development, engagement programs, and collaborative events."}
                 </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4 md:col-span-2">
+                <div className="flex items-center gap-2">
+                  <UserPlus className="w-4 h-4 text-emerald-600" />
+                  <h2 className="font-semibold text-slate-900">Recruitment Status</h2>
+                </div>
+
+                <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border ${recruitmentOpen ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                  {recruitmentOpen ? 'Open for Applications' : 'Recruitment Closed'}
+                </span>
+
+                {recruitment?.headline && (
+                  <p className="text-sm font-medium text-slate-900">{recruitment.headline}</p>
+                )}
+
+                {recruitment?.description && (
+                  <p className="text-sm text-slate-600 leading-relaxed">{recruitment.description}</p>
+                )}
+
+                {recruitment?.deadline && (
+                  <p className="text-xs text-slate-500">
+                    Application deadline: {new Date(recruitment.deadline).toLocaleDateString()}
+                  </p>
+                )}
               </div>
             </div>
           </>

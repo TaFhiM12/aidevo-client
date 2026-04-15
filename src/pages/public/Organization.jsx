@@ -207,7 +207,31 @@ const Organization = () => {
     return application ? application.status : null;
   };
 
+  const getRecruitmentStatus = (organization) => {
+    const recruitment = organization?.organization?.recruitment || {};
+    const isOpen = recruitment?.isOpen === true;
+    const deadlineTs = recruitment?.deadline
+      ? new Date(recruitment.deadline).getTime()
+      : null;
+    const deadlinePassed =
+      Number.isFinite(deadlineTs) && deadlineTs < Date.now();
+
+    return {
+      isOpen: isOpen && !deadlinePassed,
+      headline: recruitment?.headline || "",
+      description: recruitment?.description || "",
+      deadline: recruitment?.deadline || "",
+      deadlinePassed,
+    };
+  };
+
   const handleApply = (organization) => {
+    const recruitment = getRecruitmentStatus(organization);
+    if (!recruitment.isOpen) {
+      toast.error("Recruitment is currently closed for this organization");
+      return;
+    }
+
     setSelectedOrganization(organization);
     setShowApplicationModal(true);
   };
@@ -241,7 +265,17 @@ const Organization = () => {
   };
 
   const getButtonConfig = (organization) => {
+    const recruitment = getRecruitmentStatus(organization);
     const applicationStatus = getUserApplicationStatus(organization._id);
+
+    if (!recruitment.isOpen) {
+      return {
+        text: recruitment.deadlinePassed ? 'Recruitment Closed (Deadline Passed)' : 'Recruitment Closed',
+        disabled: true,
+        buttonClass: 'app-btn-secondary bg-slate-200 border-slate-200 text-slate-600 cursor-not-allowed',
+        icon: AlertCircle
+      };
+    }
 
     if (!user) {
       return {
@@ -529,6 +563,7 @@ const Organization = () => {
           <AnimatePresence>
             {filteredOrganizations.map((organization) => {
               const buttonConfig = getButtonConfig(organization);
+              const recruitmentStatus = getRecruitmentStatus(organization);
               const ButtonIcon = buttonConfig.icon;
               const statusBadge = getStatusBadge(organization);
 
@@ -552,6 +587,12 @@ const Organization = () => {
 
                   {/* Application Status Badge */}
                   {statusBadge}
+
+                    <div className={`absolute ${statusBadge ? 'top-14' : 'top-4'} right-4 z-10`}>
+                      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border ${recruitmentStatus.isOpen ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                        {recruitmentStatus.isOpen ? 'Recruiting' : 'Closed'}
+                      </span>
+                    </div>
 
                   {/* Organization Header */}
                   <div className="p-6 border-b border-gray-100 min-h-[180px]">
@@ -592,6 +633,12 @@ const Organization = () => {
                     {organization.organization?.tagline && (
                       <p className="text-gray-600 text-sm mt-3 line-clamp-2">
                         {organization.organization.tagline}
+                      </p>
+                    )}
+
+                    {recruitmentStatus.headline && (
+                      <p className="text-xs text-emerald-700 mt-2 line-clamp-1 font-medium">
+                        {recruitmentStatus.headline}
                       </p>
                     )}
                   </div>
@@ -659,6 +706,12 @@ const Organization = () => {
                     </button>
                     
                     <div className="min-h-10 mt-2">
+                      {recruitmentStatus.deadline && recruitmentStatus.isOpen && (
+                        <p className="text-xs text-slate-500 text-center mb-1">
+                          Deadline: {new Date(recruitmentStatus.deadline).toLocaleDateString()}
+                        </p>
+                      )}
+
                       {!buttonConfig.disabled && buttonConfig.text === 'Apply Now' && (
                         <p className="text-xs text-gray-500 text-center">
                           Join this organization and be part of the community
@@ -668,6 +721,12 @@ const Organization = () => {
                       {buttonConfig.disabled && buttonConfig.text === 'Sign In to Apply' && (
                         <p className="text-xs text-gray-500 text-center">
                           Please sign in to apply to organizations
+                        </p>
+                      )}
+
+                      {buttonConfig.disabled && buttonConfig.text.includes('Recruitment Closed') && (
+                        <p className="text-xs text-gray-500 text-center">
+                          This organization is not accepting applications right now
                         </p>
                       )}
                     </div>

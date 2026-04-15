@@ -11,6 +11,7 @@ import {
   UserMinus,
   Building,
   Trash2,
+  Pencil,
   Eye,
   Search,
   Filter,
@@ -18,6 +19,8 @@ import {
   X,
   Star,
   CheckCircle2,
+  Save,
+  Loader2,
 } from "lucide-react";
 import useUserRole from "../../../hooks/useUserRole";
 import AssociationEventDetails from "./shared/AssociationEventDetails";
@@ -25,6 +28,55 @@ import ClubEventDetails from "./shared/ClubEventDetails";
 import SocialServiceEventDetails from "./shared/SocialServiceEventDetails";
 import API from "../../../utils/api";
 import useInfiniteScrollSlice from "../../../hooks/useInfiniteScrollSlice";
+import { uploadToCloudinary } from "../../../utils/uploadToCloudinary";
+import { getEventFormConfig } from "../../../config/advancedEventFormConfig";
+import RenderAdvancedDynamicField from "../../../components/forms/RenderAdvancedDynamicField";
+
+const toDateTimeLocalValue = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const pad = (num) => String(num).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
+const toTagsInput = (tags) => {
+  if (Array.isArray(tags)) return tags.join(", ");
+  return tags || "";
+};
+
+const buildEditFormState = (event) => ({
+  title: event.title || "",
+  shortDesc: event.shortDesc || "",
+  longDesc: event.longDesc || "",
+  type: event.type || "on-campus",
+  category: event.category || "",
+  location: event.location || "",
+  startAt: toDateTimeLocalValue(event.startAt),
+  endAt: toDateTimeLocalValue(event.endAt),
+  registrationDeadline: toDateTimeLocalValue(event.registrationDeadline),
+  registrationRequired: event.registrationRequired !== false,
+  maxCapacity: event.maxCapacity ? String(event.maxCapacity) : "",
+  pricingType: event.pricingType === "paid" ? "paid" : "free",
+  fee: event.fee ? String(event.fee) : "0",
+  paymentDeadline: toDateTimeLocalValue(event.paymentDeadline),
+  refundPolicy: event.refundPolicy || "",
+  paymentInstructions: event.paymentInstructions || "",
+  scholarshipSeats: event.scholarshipSeats ? String(event.scholarshipSeats) : "0",
+  contactName: event.contactName || "",
+  contactEmail: event.contactEmail || "",
+  contactPhone: event.contactPhone || "",
+  tags: toTagsInput(event.tags),
+  visibility: event.visibility || "public",
+  requirements: event.requirements || "",
+  targetAudience: event.targetAudience || "",
+  organization: event.organization || "",
+  organizationEmail: event.organizationEmail || "",
+  organizationType: event.organizationType || "",
+  roleType: event.roleType || "",
+  status: event.status || "active",
+});
 
 const OrganizationEvents = () => {
   const { userInfo } = useUserRole();
@@ -44,6 +96,19 @@ const OrganizationEvents = () => {
   const [participantsLoading, setParticipantsLoading] = useState(false);
   const [participantsError, setParticipantsError] = useState("");
   const [removingParticipantMap, setRemovingParticipantMap] = useState({});
+  const [editingEvent, setEditingEvent] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState(null);
+  const [editSpecialRequirements, setEditSpecialRequirements] = useState({});
+  const [editSpecialFieldErrors, setEditSpecialFieldErrors] = useState({});
+  const [editCoverFile, setEditCoverFile] = useState(null);
+  const [editCoverPreview, setEditCoverPreview] = useState("");
+  const [editSubmitting, setEditSubmitting] = useState(false);
+
+  const dynamicConfig = useMemo(() => {
+    if (!editForm) return null;
+    return getEventFormConfig(editForm.organizationType, editForm.roleType);
+  }, [editForm]);
 
   const {
     data: queriedEvents,
@@ -179,6 +244,157 @@ const handleRemoveParticipant = async (participantId) => {
   const handleViewDetails = (event) => {
     setSelectedEvent(event);
     setShowDetailsModal(true);
+  };
+
+  const handleOpenEdit = (event) => {
+    setEditingEvent(event);
+    setEditForm(buildEditFormState(event));
+    setEditSpecialRequirements(event.specialRequirements || {});
+    setEditSpecialFieldErrors({});
+    setEditCoverFile(null);
+    setEditCoverPreview(event.cover || "");
+    setShowEditModal(true);
+  };
+
+  const handleEditInputChange = (e) => {
+    const { name, value, type, checked, files } = e.target;
+
+    if (type === "checkbox") {
+      setEditForm((prev) => ({ ...prev, [name]: checked }));
+      return;
+    }
+
+    if (type === "file") {
+      const file = files?.[0];
+      if (!file) return;
+
+      if (!file.type.startsWith("image/")) {
+        toast.error("Please choose an image file");
+        return;
+      }
+
+      setEditCoverFile(file);
+      setEditCoverPreview(URL.createObjectURL(file));
+      return;
+    }
+
+    setEditForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleEditSpecialFieldChange = (event) => {
+    const { name, value, type, checked } = event?.target || {};
+    if (!name) return;
+
+    setEditSpecialRequirements((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+
+    setEditSpecialFieldErrors((prev) => {
+      if (!prev[name]) return prev;
+      const next = { ...prev };
+      delete next[name];
+      return next;
+    });
+  };
+
+  const handleUpdateEvent = async () => {
+    if (!editingEvent?._id || !editForm) return;
+
+    if (!editForm.title.trim() || !editForm.shortDesc.trim() || !editForm.location.trim()) {
+      toast.error("Title, short description, and location are required");
+      return;
+    }
+
+    if (!editForm.startAt || !editForm.endAt) {
+      toast.error("Start and end time are required");
+      return;
+    }
+
+    if (new Date(editForm.endAt) <= new Date(editForm.startAt)) {
+      toast.error("End time must be after start time");
+      return;
+    }
+
+    const nextSpecialFieldErrors = {};
+    const requiredDynamicFields = (dynamicConfig?.extraFields || []).filter(
+      (field) => field.required
+    );
+
+    requiredDynamicFields.forEach((field) => {
+      const value = editSpecialRequirements?.[field.name];
+      const empty =
+        value === undefined ||
+        value === null ||
+        (typeof value === "string" && value.trim() === "") ||
+        (Array.isArray(value) && value.length === 0);
+
+      if (empty) {
+        nextSpecialFieldErrors[field.name] = `${field.label} is required`;
+      }
+    });
+
+    if (Object.keys(nextSpecialFieldErrors).length > 0) {
+      setEditSpecialFieldErrors(nextSpecialFieldErrors);
+      toast.error("Please complete required event-specific fields");
+      return;
+    }
+
+    const updatingToast = toast.loading("Updating event...");
+
+    try {
+      setEditSubmitting(true);
+      let coverUrl = editCoverPreview || editingEvent.cover || "";
+      if (editCoverFile) {
+        coverUrl = await uploadToCloudinary(editCoverFile);
+      }
+
+      const payload = {
+        ...editForm,
+        maxCapacity: editForm.maxCapacity ? parseInt(editForm.maxCapacity, 10) : null,
+        scholarshipSeats: editForm.scholarshipSeats
+          ? parseInt(editForm.scholarshipSeats, 10)
+          : 0,
+        fee: editForm.pricingType === "paid" ? editForm.fee || "0" : "0",
+        paymentDeadline: editForm.pricingType === "paid" ? editForm.paymentDeadline || null : null,
+        refundPolicy: editForm.pricingType === "paid" ? editForm.refundPolicy || "" : "",
+        paymentInstructions: editForm.pricingType === "paid" ? editForm.paymentInstructions || "" : "",
+        registrationDeadline: editForm.registrationDeadline || null,
+        cover: coverUrl,
+        specialRequirements: editSpecialRequirements || {},
+        tags: editForm.tags,
+      };
+
+      const response = await API.put(`/events/${editingEvent._id}`, payload);
+
+      if (!response.success) {
+        throw new Error(response.message || "Failed to update event");
+      }
+
+      queryClient.setQueryData(["organization-events", email], (currentEvents) => {
+        const nextEvents = Array.isArray(currentEvents) ? currentEvents : [];
+        return nextEvents.map((event) =>
+          event._id === editingEvent._id
+            ? {
+                ...event,
+                ...payload,
+                maxCapacity: payload.maxCapacity,
+                scholarshipSeats: payload.scholarshipSeats,
+                specialRequirements: payload.specialRequirements,
+                updatedAt: new Date().toISOString(),
+              }
+            : event
+        );
+      });
+
+      toast.success("Event updated successfully", { id: updatingToast });
+      setShowEditModal(false);
+      setEditingEvent(null);
+    } catch (error) {
+      toast.error(error?.message || "Failed to update event", { id: updatingToast });
+    } finally {
+      setEditSubmitting(false);
+    }
   };
 
   // Filter events
@@ -348,45 +564,64 @@ const handleRemoveParticipant = async (participantId) => {
         )}
 
         {/* Action Buttons */}
-        <div className="flex items-end justify-between gap-3 pt-4 border-t border-gray-100 mt-auto">
-          <div className="flex items-center gap-2">
+        <div className="mt-auto pt-4 border-t border-gray-100 space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <button
               onClick={() => handleViewDetails(event)}
-              className="app-btn-primary text-sm px-4 py-2"
+              className="app-btn-primary text-sm px-4 py-2 w-full justify-center"
             >
               <Eye className="w-4 h-4" />
               Details
             </button>
             <button
+              onClick={() => handleOpenEdit(event)}
+              className="app-btn-secondary text-sm px-4 py-2 w-full justify-center"
+            >
+              <Pencil className="w-4 h-4" />
+              Edit
+            </button>
+            <button
               onClick={() => handleViewParticipants(event)}
-              className="app-btn-secondary text-sm px-4 py-2"
+              className="app-btn-secondary text-sm px-4 py-2 w-full justify-center"
             >
               <Users className="w-4 h-4" />
               Participants
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
-            <select
-              value={event.status || "active"}
-              onChange={(e) => handleStatusUpdate(event._id, e.target.value)}
-              disabled={Boolean(statusUpdatingMap[event._id])}
-              className="h-9 text-xs px-2 border border-gray-200 rounded-lg bg-white text-gray-700"
-            >
-              <option value="active">Active</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-              <option value="draft">Draft</option>
-            </select>
-            <button
-              onClick={() => handleDeleteEvent(event._id)}
-              className="h-9 w-9 inline-flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors duration-200 rounded-lg hover:bg-red-50"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-            {statusUpdatingMap[event._id] && (
-              <CheckCircle2 className="w-4 h-4 text-sky-500 animate-pulse" />
-            )}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full">
+              <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Status
+              </span>
+              <select
+                value={event.status || "active"}
+                onChange={(e) => handleStatusUpdate(event._id, e.target.value)}
+                disabled={Boolean(statusUpdatingMap[event._id])}
+                className="h-10 w-full sm:w-44 px-3 border border-gray-200 rounded-xl bg-white text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              >
+                <option value="active">Active</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+                <option value="draft">Draft</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2 justify-end">
+              <button
+                onClick={() => handleDeleteEvent(event._id)}
+                className="h-10 w-10 inline-flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors duration-200 rounded-xl hover:bg-red-50 border border-transparent hover:border-red-100"
+                aria-label="Delete event"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+              {statusUpdatingMap[event._id] && (
+                <span className="inline-flex items-center gap-2 text-sky-600 text-sm font-medium">
+                  <CheckCircle2 className="w-4 h-4 animate-pulse" />
+                  Updating
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -568,6 +803,27 @@ const handleRemoveParticipant = async (participantId) => {
 
         {/* Details Modal */}
         <AnimatePresence>
+          {showEditModal && editingEvent && editForm && (
+            <EditEventModal
+              form={editForm}
+              specialRequirements={editSpecialRequirements}
+                dynamicConfig={dynamicConfig}
+                specialFieldErrors={editSpecialFieldErrors}
+              coverPreview={editCoverPreview}
+              submitting={editSubmitting}
+              onClose={() => {
+                setShowEditModal(false);
+                setEditingEvent(null);
+                setEditCoverFile(null);
+              }}
+              onChange={handleEditInputChange}
+                onSpecialRequirementsChange={handleEditSpecialFieldChange}
+              onSubmit={handleUpdateEvent}
+            />
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
           {showDetailsModal && selectedEvent && (
             <EventDetailsModal
               event={selectedEvent}
@@ -597,6 +853,264 @@ const handleRemoveParticipant = async (participantId) => {
         </AnimatePresence>
       </div>
     </div>
+  );
+};
+
+const EditEventModal = ({
+  form,
+  specialRequirements,
+  dynamicConfig,
+  specialFieldErrors,
+  coverPreview,
+  submitting,
+  onClose,
+  onChange,
+  onSpecialRequirementsChange,
+  onSubmit,
+}) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between p-5 border-b border-gray-200">
+          <h2 className="text-xl font-bold text-gray-900">Edit Event</h2>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-gray-100"
+            disabled={submitting}
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="max-h-[70vh] overflow-y-auto p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+              <input name="title" value={form.title} onChange={onChange} className="w-full px-3 py-2 border rounded-lg" />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Short Description</label>
+              <textarea name="shortDesc" value={form.shortDesc} onChange={onChange} rows={3} className="w-full px-3 py-2 border rounded-lg" />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Detailed Description</label>
+              <textarea name="longDesc" value={form.longDesc} onChange={onChange} rows={4} className="w-full px-3 py-2 border rounded-lg" />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+              <select name="type" value={form.type} onChange={onChange} className="w-full px-3 py-2 border rounded-lg">
+                <option value="on-campus">On-campus</option>
+                <option value="off-campus">Off-campus</option>
+                <option value="online">Online</option>
+                <option value="hybrid">Hybrid</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+              <input name="category" value={form.category} onChange={onChange} className="w-full px-3 py-2 border rounded-lg" />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+              <input name="location" value={form.location} onChange={onChange} className="w-full px-3 py-2 border rounded-lg" />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Start</label>
+              <input type="datetime-local" name="startAt" value={form.startAt} onChange={onChange} className="w-full px-3 py-2 border rounded-lg" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">End</label>
+              <input type="datetime-local" name="endAt" value={form.endAt} onChange={onChange} className="w-full px-3 py-2 border rounded-lg" />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Registration Deadline</label>
+              <input type="datetime-local" name="registrationDeadline" value={form.registrationDeadline} onChange={onChange} className="w-full px-3 py-2 border rounded-lg" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Max Capacity</label>
+              <input type="number" name="maxCapacity" value={form.maxCapacity} onChange={onChange} className="w-full px-3 py-2 border rounded-lg" />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Pricing Type</label>
+              <select name="pricingType" value={form.pricingType} onChange={onChange} className="w-full px-3 py-2 border rounded-lg">
+                <option value="free">Free</option>
+                <option value="paid">Paid</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Fee</label>
+              <input type="number" name="fee" value={form.fee} onChange={onChange} className="w-full px-3 py-2 border rounded-lg" disabled={form.pricingType !== "paid"} />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Payment Deadline</label>
+              <input type="datetime-local" name="paymentDeadline" value={form.paymentDeadline} onChange={onChange} className="w-full px-3 py-2 border rounded-lg" disabled={form.pricingType !== "paid"} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Scholarship Seats</label>
+              <input type="number" name="scholarshipSeats" value={form.scholarshipSeats} onChange={onChange} className="w-full px-3 py-2 border rounded-lg" disabled={form.pricingType !== "paid"} />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Refund Policy</label>
+              <textarea name="refundPolicy" value={form.refundPolicy} onChange={onChange} rows={2} className="w-full px-3 py-2 border rounded-lg" disabled={form.pricingType !== "paid"} />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Payment Instructions</label>
+              <textarea name="paymentInstructions" value={form.paymentInstructions} onChange={onChange} rows={2} className="w-full px-3 py-2 border rounded-lg" disabled={form.pricingType !== "paid"} />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Visibility</label>
+              <select name="visibility" value={form.visibility} onChange={onChange} className="w-full px-3 py-2 border rounded-lg">
+                <option value="public">Public</option>
+                <option value="private">Private</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <select name="status" value={form.status} onChange={onChange} className="w-full px-3 py-2 border rounded-lg">
+                <option value="active">Active</option>
+                <option value="draft">Draft</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="inline-flex items-center gap-2 text-sm font-medium text-gray-700 mt-6">
+                <input type="checkbox" name="registrationRequired" checked={form.registrationRequired} onChange={onChange} />
+                Registration Required
+              </label>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Target Audience</label>
+              <input name="targetAudience" value={form.targetAudience} onChange={onChange} className="w-full px-3 py-2 border rounded-lg" />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tags (comma separated)</label>
+              <input name="tags" value={form.tags} onChange={onChange} className="w-full px-3 py-2 border rounded-lg" />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Requirements</label>
+              <textarea name="requirements" value={form.requirements} onChange={onChange} rows={3} className="w-full px-3 py-2 border rounded-lg" />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Contact Name</label>
+              <input name="contactName" value={form.contactName} onChange={onChange} className="w-full px-3 py-2 border rounded-lg" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Contact Email</label>
+              <input name="contactEmail" value={form.contactEmail} onChange={onChange} className="w-full px-3 py-2 border rounded-lg" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Contact Phone</label>
+              <input name="contactPhone" value={form.contactPhone} onChange={onChange} className="w-full px-3 py-2 border rounded-lg" />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Organization Name</label>
+              <input name="organization" value={form.organization} onChange={onChange} className="w-full px-3 py-2 border rounded-lg" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Organization Email</label>
+              <input name="organizationEmail" value={form.organizationEmail} onChange={onChange} className="w-full px-3 py-2 border rounded-lg" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Organization Type</label>
+              <input name="organizationType" value={form.organizationType} onChange={onChange} className="w-full px-3 py-2 border rounded-lg" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Role Type</label>
+              <input name="roleType" value={form.roleType} onChange={onChange} className="w-full px-3 py-2 border rounded-lg" />
+            </div>
+
+            {(dynamicConfig?.extraFields || []).length > 0 && (
+              <div className="md:col-span-2 space-y-4">
+                <h3 className="text-sm font-semibold text-gray-800 border-b border-gray-200 pb-2">
+                  Event Specific Fields
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {dynamicConfig.extraFields.map((field) => (
+                    <div key={field.name} className={field.type === "textarea" ? "md:col-span-2" : ""}>
+                      <RenderAdvancedDynamicField
+                        field={field}
+                        value={specialRequirements?.[field.name]}
+                        onChange={onSpecialRequirementsChange}
+                        error={specialFieldErrors?.[field.name]}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Cover Image</label>
+              <input type="file" accept="image/*" onChange={onChange} name="cover" className="w-full px-3 py-2 border rounded-lg" />
+              {coverPreview && (
+                <img
+                  src={coverPreview}
+                  alt="cover preview"
+                  className="mt-3 w-full max-h-56 object-cover rounded-xl border"
+                />
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-3 p-5 border-t border-gray-200">
+          <button
+            className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+            onClick={onClose}
+            disabled={submitting}
+          >
+            Cancel
+          </button>
+          <button
+            className="app-btn-primary px-5 py-2"
+            onClick={onSubmit}
+            disabled={submitting}
+          >
+            {submitting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                Save Changes
+              </>
+            )}
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 };
 

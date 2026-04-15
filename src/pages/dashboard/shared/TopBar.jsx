@@ -114,12 +114,12 @@ const TopBar = ({ sidebarOpen, setSidebarOpen, userInfo, user }) => {
         keywords: ["members", "team", "directory"],
       },
       {
-        id: "page-org-apps",
+        id: "page-org-recruitment",
         type: "Page",
-        title: "Applications",
-        subtitle: "Review incoming applicants",
-        path: "/dashboard/org-applications",
-        keywords: ["applications", "review", "applicants"],
+        title: "Recruitment",
+        subtitle: "Open or close recruitment and update details",
+        path: "/dashboard/org-recruitment",
+        keywords: ["recruitment", "hiring", "applications"],
       },
       {
         id: "page-org-chat",
@@ -308,7 +308,7 @@ const TopBar = ({ sidebarOpen, setSidebarOpen, userInfo, user }) => {
               type: "Application",
               title: item.fullName || item.studentEmail || "Applicant",
               subtitle: `Status: ${item.status || "pending"}`,
-              path: "/dashboard/org-applications",
+              path: "/dashboard/org-recruitment",
               keywords: ["applicant", "application", item.status || ""],
             });
           });
@@ -365,7 +365,8 @@ const TopBar = ({ sidebarOpen, setSidebarOpen, userInfo, user }) => {
       'org-profile': `${userInfo?.organizationName || 'Organization'} Profile`,
       'org-events': 'Events',
       'org-members': 'Members',
-      'org-applications': 'Applications',
+      'org-applications': 'Recruitment',
+      'org-recruitment': 'Recruitment',
       'org-chat': 'Communication',
       'org-analytics': 'Analytics',
       'org-payments': 'Payments',

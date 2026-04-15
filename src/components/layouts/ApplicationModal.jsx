@@ -35,6 +35,9 @@ const ApplicationModal = ({ organization, onClose, onSubmit }) => {
     resume: null,
   });
 
+  const recruitment = organization?.organization?.recruitment || {};
+  const recruitmentOpen = recruitment?.isOpen === true;
+
   const handleChange = (e) => {
     const { name, value, files } = e.target;
 
@@ -82,6 +85,10 @@ const ApplicationModal = ({ organization, onClose, onSubmit }) => {
     try {
       if (!organization?.uid) {
         throw new Error("Organization data is missing");
+      }
+
+      if (!recruitmentOpen) {
+        throw new Error("Recruitment is currently closed for this organization");
       }
 
       if (!user?.uid) {
@@ -177,6 +184,12 @@ const ApplicationModal = ({ organization, onClose, onSubmit }) => {
               <AlertCircle className="w-5 h-5" />
               <span className="text-sm">{error}</span>
             </div>
+          </div>
+        )}
+
+        {!recruitmentOpen && (
+          <div className="mx-6 mt-4 bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded-xl">
+            Recruitment is currently closed. Please check back later.
           </div>
         )}
 
@@ -408,7 +421,7 @@ const ApplicationModal = ({ organization, onClose, onSubmit }) => {
               Cancel
             </button>
             <motion.button
-              whileHover={{ scale: loading ? 1 : 1.02 }}
+              disabled={loading || !recruitmentOpen}
               whileTap={{ scale: loading ? 1 : 0.98 }}
               type="submit"
               disabled={loading}

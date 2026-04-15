@@ -51,9 +51,9 @@ const SideBar = ({ sidebarOpen, userInfo, user, logOut }) => {
       { name: "New Event", icon: Plus, path: "/dashboard/org-create-event" },
       { name: "Members", icon: Users, path: "/dashboard/org-members" },
       {
-        name: "Applications",
+        name: "Recruitment",
         icon: UserPlus,
-        path: "/dashboard/org-applications",
+        path: "/dashboard/org-recruitment",
       },
       { name: "Chat", icon: MessageCircle, path: "/dashboard/org-chat" },
       { name: "Analytics", icon: BarChart3, path: "/dashboard/org-analytics" },

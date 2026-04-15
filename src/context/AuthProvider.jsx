@@ -12,6 +12,19 @@ const TOKEN_ATTEMPT_TIMEOUTS = [10000, 15000, 20000, 25000];
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const hasOrganizationMetadata = (userInfo) => {
+    if (!userInfo || userInfo.role !== 'organization') {
+        return true;
+    }
+
+    const organizationType =
+        userInfo?.organization?.type || userInfo?.type || userInfo?.roleType;
+    const organizationName =
+        userInfo?.organization?.name || userInfo?.organizationName || userInfo?.name;
+
+    return Boolean(String(organizationType || '').trim()) && Boolean(String(organizationName || '').trim());
+};
+
 const AuthProvider = ({children}) => {
     
     const [user , setUser] = useState(null);
@@ -29,7 +42,10 @@ const AuthProvider = ({children}) => {
         if (existingToken && !forceRefresh) {
             try {
                 if (existingUserInfo) {
-                  return JSON.parse(existingUserInfo);
+                                    const parsedUserInfo = JSON.parse(existingUserInfo);
+                                    if (hasOrganizationMetadata(parsedUserInfo)) {
+                                        return parsedUserInfo;
+                                    }
                 }
                 // Fall through to refresh so we can restore structured user metadata.
             } catch {

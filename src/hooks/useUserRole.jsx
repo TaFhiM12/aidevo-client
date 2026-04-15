@@ -14,6 +14,20 @@ const readCachedUserInfo = () => {
   }
 };
 
+const hasOrganizationMetadata = (userInfo) => {
+  if (!userInfo || userInfo.role !== "organization") {
+    return true;
+  }
+
+  const organizationType =
+    userInfo?.organization?.type || userInfo?.type || userInfo?.roleType;
+
+  const organizationName =
+    userInfo?.organization?.name || userInfo?.organizationName || userInfo?.name;
+
+  return Boolean(String(organizationType || "").trim()) && Boolean(String(organizationName || "").trim());
+};
+
 const useUserRole = () => {
   const { user, loading: authLoading, obtainAccessToken } = useAuth();
   const { globalUserInfo, updateGlobalUserInfo, userUpdateKey } = useUserContext();
@@ -26,7 +40,16 @@ const useUserRole = () => {
     queryFn: async () => {
       const cachedUserInfo = readCachedUserInfo();
       if (cachedUserInfo?.email === user.email) {
-        return cachedUserInfo;
+        if (hasOrganizationMetadata(cachedUserInfo)) {
+          return cachedUserInfo;
+        }
+
+        // Cached payload is stale (common after backend auth payload upgrades).
+        const refreshedUser = await obtainAccessToken(user, { forceRefresh: true });
+        if (!refreshedUser) {
+          throw new Error("AUTH_TOKEN_UNAVAILABLE");
+        }
+        return refreshedUser;
       }
 
       const tokenUser = await obtainAccessToken(user);

@@ -40,6 +40,16 @@ const AdvancedEventCreationForm = ({
   organizationEmail,
   roleType = null,
 }) => {
+  const normalizedOrganizationName =
+    String(organizationName || "").trim() ||
+    String(organizationEmail || "")
+      .split("@")[0]
+      .replace(/[._-]+/g, " ")
+      .trim();
+
+  const normalizedOrganizationEmail =
+    String(organizationEmail || "").trim();
+
   const draftKey = useMemo(
     () =>
       `event_draft_${organizationEmail || "unknown"}_${organizationType || "generic"}_${roleType || "none"}`,
@@ -61,7 +71,7 @@ const AdvancedEventCreationForm = ({
       else extraDefaults[field.name] = "";
     }
 
-    return {
+    const state = {
       ...COMMON_EVENT_DEFAULTS,
       ...config.defaultValues,
       ...extraDefaults,
@@ -69,15 +79,23 @@ const AdvancedEventCreationForm = ({
         Number.parseFloat(config.defaultValues?.fee || "0") > 0
           ? "paid"
           : "free",
-      organization: organizationName || "",
-      organizationEmail: organizationEmail || "",
-      contactEmail: organizationEmail || "",
+      organization: normalizedOrganizationName || "",
+      organizationEmail: normalizedOrganizationEmail || "",
+      contactEmail: normalizedOrganizationEmail || "",
       organizationType: organizationType,
       roleType: roleType,
     };
-  }, [config, organizationName, organizationEmail, organizationType, roleType]);
 
-  const [formData, setFormData] = useState(initialState);
+    return state;
+  }, [
+    config,
+    normalizedOrganizationName,
+    normalizedOrganizationEmail,
+    organizationType,
+    roleType,
+  ]);
+
+  const [formData, setFormData] = useState(initialState || {});
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
@@ -85,9 +103,27 @@ const AdvancedEventCreationForm = ({
   const [draftStatus, setDraftStatus] = useState("idle");
   const [lastSavedAt, setLastSavedAt] = useState(null);
   const [isDraftRestored, setIsDraftRestored] = useState(false);
+  const [coverPreview, setCoverPreview] = useState(null);
   const isDraftReadyRef = useRef(false);
 
+  const resolvedOrganizationType =
+    String(formData?.organizationType || "").trim() ||
+    String(organizationType || "").trim() ||
+    String(roleType || "").trim();
+
+  const resolvedRoleType =
+    String(formData?.roleType || "").trim() ||
+    String(roleType || "").trim() ||
+    resolvedOrganizationType;
+
   const totalSteps = 3;
+
+  // Initialize form data from initial state
+  useEffect(() => {
+    if (initialState && !isDraftRestored) {
+      setFormData(initialState);
+    }
+  }, [initialState, isDraftRestored]);
 
   if (!config) {
     return (
@@ -127,6 +163,12 @@ const AdvancedEventCreationForm = ({
           return;
         }
         setFormData((prev) => ({ ...prev, [name]: file }));
+        
+        // Create preview URL for cover image
+        if (name === "cover") {
+          const previewUrl = URL.createObjectURL(file);
+          setCoverPreview(previewUrl);
+        }
       }
       return;
     }
@@ -226,6 +268,20 @@ const AdvancedEventCreationForm = ({
   const getPublishChecklist = () => {
     const checks = [
       {
+        id: "organization",
+        label: "Organization is specified",
+        done: Boolean(
+          String(formData?.organization || normalizedOrganizationName).trim()
+        ),
+      },
+      {
+        id: "organizationEmail",
+        label: "Organization email is valid",
+        done: Boolean(
+          String(formData?.organizationEmail || normalizedOrganizationEmail).includes("@")
+        ),
+      },
+      {
         id: "title",
         label: "Event title is provided",
         done: Boolean(formData?.title?.trim()),
@@ -234,6 +290,11 @@ const AdvancedEventCreationForm = ({
         id: "summary",
         label: "Short description is complete",
         done: Boolean(formData?.shortDesc?.trim()),
+      },
+      {
+        id: "location",
+        label: "Location is provided",
+        done: Boolean(formData?.location?.trim()),
       },
       {
         id: "schedule",
@@ -295,7 +356,22 @@ const AdvancedEventCreationForm = ({
         return;
       }
 
-      setFormData((prev) => ({ ...prev, ...parsed.formData }));
+      setFormData((prev) => {
+        const draftForm = parsed.formData || {};
+        const merged = { ...prev, ...draftForm };
+
+        const draftOrgName = String(merged.organization || "").trim();
+        const draftOrgEmail = String(merged.organizationEmail || "").trim();
+        const draftContactEmail = String(merged.contactEmail || "").trim();
+
+        return {
+          ...merged,
+          organization: draftOrgName || normalizedOrganizationName,
+          organizationEmail: draftOrgEmail || normalizedOrganizationEmail,
+          contactEmail:
+            draftContactEmail || draftOrgEmail || normalizedOrganizationEmail,
+        };
+      });
       if (parsed.currentStep >= 1 && parsed.currentStep <= totalSteps) {
         setCurrentStep(parsed.currentStep);
       }
@@ -306,7 +382,61 @@ const AdvancedEventCreationForm = ({
     } finally {
       isDraftReadyRef.current = true;
     }
-  }, [draftKey, initialState]);
+  }, [
+    draftKey,
+    initialState,
+    normalizedOrganizationName,
+    normalizedOrganizationEmail,
+  ]);
+
+  // Ensure organization fields are always populated from props
+  useEffect(() => {
+    setFormData((prev) => {
+      if (!prev) return prev;
+
+      const nextOrganization =
+        String(prev.organization || "").trim() || normalizedOrganizationName;
+      const nextOrganizationEmail =
+        String(prev.organizationEmail || "").trim() || normalizedOrganizationEmail;
+      const nextContactEmail =
+        String(prev.contactEmail || "").trim() || nextOrganizationEmail;
+      const nextOrganizationType =
+        String(prev.organizationType || "").trim() ||
+        String(organizationType || "").trim() ||
+        String(roleType || "").trim();
+
+      if (
+        nextOrganization === prev.organization &&
+        nextOrganizationEmail === prev.organizationEmail &&
+        nextContactEmail === prev.contactEmail &&
+        nextOrganizationType === prev.organizationType
+      ) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        organization: nextOrganization,
+        organizationEmail: nextOrganizationEmail,
+        contactEmail: nextContactEmail,
+        organizationType: nextOrganizationType,
+      };
+    });
+  }, [
+    normalizedOrganizationName,
+    normalizedOrganizationEmail,
+    organizationType,
+    roleType,
+  ]);
+
+  // Cleanup cover preview URL on unmount
+  useEffect(() => {
+    return () => {
+      if (coverPreview) {
+        URL.revokeObjectURL(coverPreview);
+      }
+    };
+  }, [coverPreview]);
 
   useEffect(() => {
     if (!isDraftReadyRef.current || !formData) return;
@@ -349,11 +479,11 @@ const AdvancedEventCreationForm = ({
         Number.parseFloat(config.defaultValues?.fee || "0") > 0
           ? "paid"
           : "free",
-      organization: organizationName || "",
-      organizationEmail: organizationEmail || "",
-      contactEmail: organizationEmail || "",
-      organizationType: organizationType,
-      roleType: roleType,
+      organization: normalizedOrganizationName || "",
+      organizationEmail: normalizedOrganizationEmail || "",
+      contactEmail: normalizedOrganizationEmail || "",
+      organizationType: String(organizationType || roleType || "").trim(),
+      roleType: String(roleType || organizationType || "").trim(),
     });
     setErrors({});
     setCurrentStep(1);
@@ -366,6 +496,11 @@ const AdvancedEventCreationForm = ({
   // components/events/AdvancedEventCreationForm.jsx (updated handleSubmit)
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!resolvedOrganizationType) {
+      toast.error("Organization type is missing. Please refresh and try again.");
+      return;
+    }
 
     if (!validateStep()) {
       toast.error("Please fill all required fields correctly");
@@ -400,10 +535,14 @@ const AdvancedEventCreationForm = ({
         title: formData.title,
         shortDesc: formData.shortDesc,
         longDesc: formData.longDesc || "",
-        organization: organizationName,
-        organizationEmail: organizationEmail,
-        organizationType: organizationType,
-        roleType: roleType,
+        organization: String(
+          formData.organization || normalizedOrganizationName || ""
+        ).trim(),
+        organizationEmail: String(
+          formData.organizationEmail || normalizedOrganizationEmail || ""
+        ).trim(),
+        organizationType: resolvedOrganizationType,
+        roleType: resolvedRoleType,
         type: formData.type,
         category: formData.category,
         location: formData.location,
@@ -883,7 +1022,7 @@ const AdvancedEventCreationForm = ({
                       </div>
                     </div>
 
-                    <div>
+                    <div className="md:col-span-2">
                       <label className="block mb-2 font-medium text-gray-700">
                         Cover Image
                       </label>
@@ -900,6 +1039,29 @@ const AdvancedEventCreationForm = ({
                       <p className="text-xs text-gray-500 mt-1">
                         Max 5MB. JPG, PNG, GIF accepted
                       </p>
+                      
+                      {coverPreview && (
+                        <div className="mt-4 rounded-xl overflow-hidden border border-gray-200 max-w-xs">
+                          <img
+                            src={coverPreview}
+                            alt="Cover preview"
+                            className="w-full h-48 object-cover"
+                          />
+                          <div className="bg-gray-50 p-3 flex items-center justify-between">
+                            <span className="text-sm text-gray-600">Preview</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCoverPreview(null);
+                                setFormData((prev) => ({ ...prev, cover: null }));
+                              }}
+                              className="text-xs px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-3">
@@ -960,15 +1122,18 @@ const AdvancedEventCreationForm = ({
                         Organization Name{" "}
                         <span className="text-red-500">*</span>
                       </label>
-                      <div className="flex items-center border rounded-xl px-4 py-3 focus-within:ring-2 focus-within:ring-blue-500">
+                      <div className="flex items-center border rounded-xl px-4 py-3 focus-within:ring-2 focus-within:ring-blue-500 bg-gray-50">
                         <Building className="text-gray-400 mr-3" size={18} />
                         <input
                           name="organization"
-                          value={formData.organization}
-                          onChange={handleChange}
-                          className="w-full outline-none bg-transparent"
+                          value={formData.organization || ""}
+                          readOnly
+                          className="w-full outline-none bg-transparent text-gray-700 cursor-not-allowed"
                         />
                       </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Auto-populated from your organization account
+                      </p>
                       {errors.organization && (
                         <p className="mt-1 text-sm text-red-500">
                           {errors.organization}
@@ -981,14 +1146,14 @@ const AdvancedEventCreationForm = ({
                         Organization Email{" "}
                         <span className="text-red-500">*</span>
                       </label>
-                      <div className="flex items-center border rounded-xl px-4 py-3 focus-within:ring-2 focus-within:ring-blue-500">
+                      <div className="flex items-center border rounded-xl px-4 py-3 focus-within:ring-2 focus-within:ring-blue-500 bg-gray-50">
                         <Mail className="text-gray-400 mr-3" size={18} />
                         <input
                           type="email"
                           name="organizationEmail"
-                          value={formData.organizationEmail}
-                          onChange={handleChange}
-                          className="w-full outline-none bg-transparent"
+                          value={formData.organizationEmail || ""}
+                          readOnly
+                          className="w-full outline-none bg-transparent text-gray-700 cursor-not-allowed"
                         />
                       </div>
                       {errors.organizationEmail && (
