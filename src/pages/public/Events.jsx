@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -15,20 +15,28 @@ import {
   ArrowRight,
   Star,
 } from "lucide-react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import API from '../../utils/api';
 import useAuth from '../../hooks/useAuth';
 import { useUserContext } from '../../context/UserContext';
 import EventRecommendationsSection from '../../components/events/EventRecommendationsSection';
 import TrendingEventsSection from '../../components/events/TrendingEventsSection';
+import PaginationControls from '../../components/common/PaginationControls';
 
 const Events = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedOrganization, setSelectedOrganization] = useState("all");
   const [selectedType, setSelectedType] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState("newest");
+  const [currentPage, setCurrentPage] = useState(() => {
+    const parsedPage = Number.parseInt(searchParams.get("page") || "1", 10);
+    return Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+  });
+
+  const ITEMS_PER_PAGE = 9;
 
   const { user } = useAuth();
   const { globalUserInfo } = useUserContext();
@@ -150,6 +158,52 @@ const Events = () => {
         return 0;
     }
   });
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedCategory, selectedOrganization, selectedType, sortBy]);
+
+  useEffect(() => {
+    const parsedPage = Number.parseInt(searchParams.get("page") || "1", 10);
+    const pageFromUrl = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+    if (pageFromUrl !== currentPage) {
+      setCurrentPage(pageFromUrl);
+    }
+  }, [searchParams, currentPage]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedEvents.length / ITEMS_PER_PAGE));
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  useEffect(() => {
+    const currentQueryPage = searchParams.get("page");
+    const targetQueryPage = currentPage > 1 ? String(currentPage) : null;
+
+    if ((currentQueryPage || null) === targetQueryPage) {
+      return;
+    }
+
+    const nextParams = new URLSearchParams(searchParams);
+    if (targetQueryPage) {
+      nextParams.set("page", targetQueryPage);
+    } else {
+      nextParams.delete("page");
+    }
+    setSearchParams(nextParams, { replace: true });
+  }, [currentPage, searchParams, setSearchParams]);
+
+  const currentPageSafe = Math.min(currentPage, totalPages);
+
+  const paginatedEvents = useMemo(() => {
+    const startIndex = (currentPageSafe - 1) * ITEMS_PER_PAGE;
+    return sortedEvents.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [currentPageSafe, sortedEvents]);
+
+  const showingStart = sortedEvents.length === 0 ? 0 : (currentPageSafe - 1) * ITEMS_PER_PAGE + 1;
+  const showingEnd = Math.min(currentPageSafe * ITEMS_PER_PAGE, sortedEvents.length);
 
   const getNextDeadline = (event) => {
     return event?.registrationDeadline || event?.paymentDeadline || null;
@@ -610,11 +664,11 @@ const Events = () => {
           {/* Results Count */}
           <div className="flex items-center justify-between mb-6">
             <p className="text-gray-600">
-              Found{" "}
+              Showing{" "}
               <span className="font-bold text-gray-900">
-                {sortedEvents.length}
+                {showingStart}-{showingEnd}
               </span>{" "}
-              events
+              of {sortedEvents.length} events
               {searchTerm && ` for "${searchTerm}"`}
             </p>
 
@@ -652,7 +706,7 @@ const Events = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <AnimatePresence>
-                {sortedEvents.map((event, index) => (
+                {paginatedEvents.map((event, index) => (
                   <motion.div
                     key={event._id}
                     initial={{ opacity: 0, y: 20 }}
@@ -664,6 +718,15 @@ const Events = () => {
                 ))}
               </AnimatePresence>
             </div>
+          )}
+
+          {sortedEvents.length > 0 && (
+            <PaginationControls
+              className="mt-8"
+              currentPage={currentPageSafe}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
           )}
         </motion.div>
           </>

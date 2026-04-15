@@ -1,5 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   HeartPulse,
   MapPin,
@@ -37,6 +39,20 @@ const URGENCY_BADGE_STYLES = {
   critical: "bg-red-600 text-white",
   high: "bg-amber-500 text-white",
   medium: "bg-sky-600 text-white",
+};
+
+const BLOOD_BANK_TABS = ["emergency", "forms", "donors", "admin"];
+
+const normalizeTab = (tab, isAdmin) => {
+  if (!tab || !BLOOD_BANK_TABS.includes(tab)) {
+    return "emergency";
+  }
+
+  if (tab === "admin" && !isAdmin) {
+    return "emergency";
+  }
+
+  return tab;
 };
 
 const toRadians = (degree) => (degree * Math.PI) / 180;
@@ -78,6 +94,7 @@ const formatTimeAgo = (dateLike) => {
 };
 
 const BloodBank = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { userInfo } = useUserRole();
   const isAdmin = userInfo?.role === "super-admin" || userInfo?.role === "superAdmin";
   const queryClient = useQueryClient();
@@ -90,6 +107,10 @@ const BloodBank = () => {
   const [sortMode, setSortMode] = useState("latest");
   const [donorSearch, setDonorSearch] = useState("");
   const [viewerLocation, setViewerLocation] = useState({ latitude: null, longitude: null });
+  const activeSection = useMemo(
+    () => normalizeTab(searchParams.get("tab"), isAdmin),
+    [searchParams, isAdmin]
+  );
 
   const [form, setForm] = useState({
     name: "",
@@ -392,6 +413,19 @@ const BloodBank = () => {
     };
   }, [donors.length, urgentRequests]);
 
+  const handleTabChange = (nextTab) => {
+    const normalizedTab = normalizeTab(nextTab, isAdmin);
+    const nextParams = new URLSearchParams(searchParams);
+
+    if (normalizedTab === "emergency") {
+      nextParams.delete("tab");
+    } else {
+      nextParams.set("tab", normalizedTab);
+    }
+
+    setSearchParams(nextParams, { replace: true });
+  };
+
   const resetDonorFilters = () => {
     setSelectedBloodGroup("all");
     setSortMode("latest");
@@ -460,32 +494,117 @@ const BloodBank = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-              <div className="rounded-xl bg-red-50 border border-red-100 p-3">
-                <p className="text-xs text-red-700 font-medium">Critical Live</p>
-                <p className="text-2xl font-bold text-red-700">{stats.critical}</p>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+              <div className="relative lg:col-span-4 rounded-2xl overflow-hidden border border-red-200 bg-gradient-to-br from-red-500 via-rose-500 to-red-600 text-white p-4 md:p-5">
+                <div className="absolute -top-8 -right-8 w-24 h-24 rounded-full bg-white/20 blur-xl" />
+                <p className="text-xs uppercase tracking-wider text-red-100 font-semibold">Live Critical Cases</p>
+                <div className="mt-3 flex items-end justify-between">
+                  <p className="text-4xl md:text-5xl font-extrabold leading-none">{stats.critical}</p>
+                  <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 bg-white/20 text-xs font-semibold">
+                    <Siren className="w-3.5 h-3.5" />
+                    Immediate Action
+                  </span>
+                </div>
+                <p className="mt-3 text-xs text-red-100">Prioritized at the top of the emergency board.</p>
               </div>
-              <div className="rounded-xl bg-amber-50 border border-amber-100 p-3">
-                <p className="text-xs text-amber-700 font-medium">High Priority</p>
-                <p className="text-2xl font-bold text-amber-700">{stats.high}</p>
-              </div>
-              <div className="rounded-xl bg-sky-50 border border-sky-100 p-3">
-                <p className="text-xs text-sky-700 font-medium">Medium Priority</p>
-                <p className="text-2xl font-bold text-sky-700">{stats.medium}</p>
-              </div>
-              <div className="rounded-xl bg-rose-50 border border-rose-100 p-3">
-                <p className="text-xs text-rose-700 font-medium">Active Requests</p>
-                <p className="text-2xl font-bold text-rose-700">{stats.totalActiveRequests}</p>
-              </div>
-              <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-3">
-                <p className="text-xs text-emerald-700 font-medium">Available Donors</p>
-                <p className="text-2xl font-bold text-emerald-700">{stats.donorCount}</p>
+
+              <div className="lg:col-span-8 grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-3 md:p-4">
+                  <p className="text-xs font-semibold text-amber-700">High Priority</p>
+                  <p className="mt-2 text-3xl font-bold text-amber-700">{stats.high}</p>
+                  <p className="text-[11px] text-amber-700/80 mt-1">Need response soon</p>
+                </div>
+
+                <div className="rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-50 to-blue-50 p-3 md:p-4">
+                  <p className="text-xs font-semibold text-sky-700">Medium Priority</p>
+                  <p className="mt-2 text-3xl font-bold text-sky-700">{stats.medium}</p>
+                  <p className="text-[11px] text-sky-700/80 mt-1">Monitor and prepare</p>
+                </div>
+
+                <div className="rounded-2xl border border-rose-200 bg-gradient-to-br from-rose-50 to-pink-50 p-3 md:p-4">
+                  <p className="text-xs font-semibold text-rose-700">Active Requests</p>
+                  <p className="mt-2 text-3xl font-bold text-rose-700">{stats.totalActiveRequests}</p>
+                  <p className="text-[11px] text-rose-700/80 mt-1">Across all urgency levels</p>
+                </div>
+
+                <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-green-50 p-3 md:p-4">
+                  <p className="text-xs font-semibold text-emerald-700">Available Donors</p>
+                  <p className="mt-2 text-3xl font-bold text-emerald-700">{stats.donorCount}</p>
+                  <p className="text-[11px] text-emerald-700/80 mt-1">Ready in searchable list</p>
+                </div>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="app-surface p-6 border border-red-200 bg-gradient-to-r from-red-50 to-rose-50">
+        <section className="app-surface p-3 md:p-4 border border-slate-200 sticky top-20 z-20">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <button
+              type="button"
+              onClick={() => handleTabChange("emergency")}
+              className={`px-3 py-2.5 rounded-xl text-sm font-semibold inline-flex items-center justify-center gap-2 border transition-colors ${
+                activeSection === "emergency"
+                  ? "bg-red-600 text-white border-red-600"
+                  : "bg-white text-slate-700 border-slate-200 hover:border-red-200"
+              }`}
+            >
+              <Siren className="w-4 h-4" />
+              Emergency Board
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTabChange("forms")}
+              className={`px-3 py-2.5 rounded-xl text-sm font-semibold inline-flex items-center justify-center gap-2 border transition-colors ${
+                activeSection === "forms"
+                  ? "bg-red-600 text-white border-red-600"
+                  : "bg-white text-slate-700 border-slate-200 hover:border-red-200"
+              }`}
+            >
+              <HeartPulse className="w-4 h-4" />
+              Submit Forms
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTabChange("donors")}
+              className={`px-3 py-2.5 rounded-xl text-sm font-semibold inline-flex items-center justify-center gap-2 border transition-colors ${
+                activeSection === "donors"
+                  ? "bg-red-600 text-white border-red-600"
+                  : "bg-white text-slate-700 border-slate-200 hover:border-red-200"
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              Donor List
+            </button>
+
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => handleTabChange("admin")}
+                className={`px-3 py-2.5 rounded-xl text-sm font-semibold inline-flex items-center justify-center gap-2 border transition-colors ${
+                  activeSection === "admin"
+                    ? "bg-red-600 text-white border-red-600"
+                    : "bg-white text-slate-700 border-slate-200 hover:border-red-200"
+                }`}
+              >
+                <ShieldCheck className="w-4 h-4" />
+                Admin
+              </button>
+            )}
+          </div>
+        </section>
+
+        <AnimatePresence mode="sync" initial={false}>
+        {activeSection === "emergency" && (
+        <motion.section
+          key="tab-emergency"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.22, ease: "easeOut" }}
+          className="app-surface p-6 border border-red-200 bg-gradient-to-r from-red-50 to-rose-50"
+        >
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 mb-4">
             <div>
               <h2 className="section-title-md text-slate-900 inline-flex items-center gap-2">
@@ -589,9 +708,18 @@ const BloodBank = () => {
               )}
             </div>
           )}
-        </section>
+        </motion.section>
+        )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {activeSection === "forms" && (
+        <motion.div
+          key="tab-forms"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.22, ease: "easeOut" }}
+          className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+        >
           <section className="app-surface p-6">
             <h2 className="section-title-md text-slate-900 mb-1">Become a Donor</h2>
             <p className="text-sm text-slate-500 mb-4">Submit your profile so people can find compatible blood quickly.</p>
@@ -825,9 +953,18 @@ const BloodBank = () => {
               </button>
             </form>
           </section>
-        </div>
+        </motion.div>
+        )}
 
-        <div className="grid grid-cols-1 gap-6">
+        {activeSection === "donors" && (
+        <motion.div
+          key="tab-donors"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.22, ease: "easeOut" }}
+          className="grid grid-cols-1 gap-6"
+        >
           <section className="app-surface p-6">
             <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
               <h2 className="section-title-md text-slate-900">Available Donors</h2>
@@ -940,10 +1077,18 @@ const BloodBank = () => {
             )}
           </section>
 
-        </div>
+        </motion.div>
+        )}
 
-        {isAdmin && (
-          <section className="app-surface p-6">
+        {isAdmin && activeSection === "admin" && (
+          <motion.section
+            key="tab-admin"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
+            className="app-surface p-6"
+          >
             <h2 className="section-title-md text-slate-900 mb-4 inline-flex items-center gap-2">
               <ShieldCheck className="w-5 h-5 text-sky-600" />
               Admin Moderation
@@ -1030,8 +1175,9 @@ const BloodBank = () => {
                 </div>
               </div>
             )}
-          </section>
+          </motion.section>
         )}
+        </AnimatePresence>
       </div>
     </div>
   );

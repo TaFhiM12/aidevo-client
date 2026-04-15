@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { Link, useSearchParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { 
   Search, 
@@ -23,12 +24,14 @@ import {
 } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import ApplicationModal from '../../components/layouts/ApplicationModal';
+import PaginationControls from '../../components/common/PaginationControls';
 import useAuth from '../../hooks/useAuth';
 import useUserRole from '../../hooks/useUserRole';
 import API from '../../utils/api';
 import toast from 'react-hot-toast';
 
 const Organization = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const { userInfo, loading: roleLoading } = useUserRole();
   const [searchTerm, setSearchTerm] = useState('');
@@ -39,6 +42,12 @@ const Organization = () => {
   const [savedOrgIds, setSavedOrgIds] = useState([]);
   const [selectedOrganization, setSelectedOrganization] = useState(null);
   const [showApplicationModal, setShowApplicationModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(() => {
+    const parsedPage = Number.parseInt(searchParams.get('page') || '1', 10);
+    return Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+  });
+
+  const ITEMS_PER_PAGE = 9;
 
   const orgTypes = ['all', 'Club', 'NGO', 'Department', 'Community', 'Society', 'Association'];
   const campuses = ['all', 'Main Campus', 'North Campus', 'South Campus', 'City Campus', 'Online'];
@@ -124,7 +133,10 @@ const Organization = () => {
     staleTime: 1000 * 60 * 2,
   });
 
-  const organizations = organizationsQuery.data || [];
+  const organizations = useMemo(
+    () => organizationsQuery.data ?? [],
+    [organizationsQuery.data]
+  );
   const userApplications = applicationsQuery.data || [];
   const loading = organizationsQuery.isLoading;
   const applicationsLoading = applicationsQuery.isLoading;
@@ -179,6 +191,57 @@ const Organization = () => {
 
     return filtered;
   }, [organizations, searchTerm, selectedType, selectedCampus, savedOnly, savedOrgIds, sortBy]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedType, selectedCampus, sortBy, savedOnly]);
+
+  useEffect(() => {
+    const parsedPage = Number.parseInt(searchParams.get('page') || '1', 10);
+    const pageFromUrl = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+    if (pageFromUrl !== currentPage) {
+      setCurrentPage(pageFromUrl);
+    }
+  }, [searchParams, currentPage]);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredOrganizations.length / ITEMS_PER_PAGE)
+  );
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  useEffect(() => {
+    const currentQueryPage = searchParams.get('page');
+    const targetQueryPage = currentPage > 1 ? String(currentPage) : null;
+
+    if ((currentQueryPage || null) === targetQueryPage) {
+      return;
+    }
+
+    const nextParams = new URLSearchParams(searchParams);
+    if (targetQueryPage) {
+      nextParams.set('page', targetQueryPage);
+    } else {
+      nextParams.delete('page');
+    }
+    setSearchParams(nextParams, { replace: true });
+  }, [currentPage, searchParams, setSearchParams]);
+
+  const paginatedOrganizations = useMemo(() => {
+    const safePage = Math.min(currentPage, totalPages);
+    const startIndex = (safePage - 1) * ITEMS_PER_PAGE;
+    return filteredOrganizations.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredOrganizations, currentPage, totalPages]);
+
+  const currentPageSafe = Math.min(currentPage, totalPages);
+  const showingStart =
+    filteredOrganizations.length === 0 ? 0 : (currentPageSafe - 1) * ITEMS_PER_PAGE + 1;
+  const showingEnd = Math.min(currentPageSafe * ITEMS_PER_PAGE, filteredOrganizations.length);
 
   useEffect(() => {
     try {
@@ -273,7 +336,8 @@ const Organization = () => {
         text: recruitment.deadlinePassed ? 'Recruitment Closed (Deadline Passed)' : 'Recruitment Closed',
         disabled: true,
         buttonClass: 'app-btn-secondary bg-slate-200 border-slate-200 text-slate-600 cursor-not-allowed',
-        icon: AlertCircle
+        icon: AlertCircle,
+        helperText: 'This organization is not accepting applications right now.'
       };
     }
 
@@ -282,7 +346,8 @@ const Organization = () => {
         text: 'Sign In to Apply',
         disabled: true,
         buttonClass: 'app-btn-secondary bg-slate-200 border-slate-200 text-slate-600 cursor-not-allowed',
-        icon: LogIn
+        icon: LogIn,
+        helperText: 'Please sign in with a student account to submit an application.'
       };
     }
 
@@ -291,7 +356,8 @@ const Organization = () => {
         text: 'Loading...',
         disabled: true,
         buttonClass: 'app-btn-secondary bg-slate-200 border-slate-200 text-slate-600 cursor-not-allowed',
-        icon: Clock
+        icon: Clock,
+        helperText: 'Checking your eligibility...'
       };
     }
 
@@ -300,7 +366,8 @@ const Organization = () => {
         text: 'Students Only',
         disabled: true,
         buttonClass: 'app-btn-secondary bg-slate-200 border-slate-200 text-slate-600 cursor-not-allowed',
-        icon: AlertCircle
+        icon: AlertCircle,
+        helperText: 'Only student accounts can apply to organizations.'
       };
     }
 
@@ -309,17 +376,20 @@ const Organization = () => {
         pending: {
           text: 'Application Pending',
           buttonClass: 'inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 text-white font-semibold cursor-default',
-          icon: Clock
+          icon: Clock,
+          helperText: 'You have already applied to this organization.'
         },
         approved: {
           text: 'Approved ✓',
           buttonClass: 'inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold cursor-default',
-          icon: CheckCircle
+          icon: CheckCircle,
+          helperText: 'You have already applied to this organization.'
         },
         rejected: {
           text: 'Application Rejected',
           buttonClass: 'inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-rose-600 text-white font-semibold cursor-default',
-          icon: XCircle
+          icon: XCircle,
+          helperText: 'You have already applied to this organization.'
         }
       };
       return { ...statusConfig[applicationStatus], disabled: true };
@@ -329,7 +399,8 @@ const Organization = () => {
       text: 'Apply Now',
       disabled: false,
       buttonClass: 'app-btn-primary',
-      icon: Users
+      icon: Users,
+      helperText: 'Join this organization and be part of the community.'
     };
   };
 
@@ -561,7 +632,7 @@ const Organization = () => {
         {/* Organizations Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <AnimatePresence>
-            {filteredOrganizations.map((organization) => {
+            {paginatedOrganizations.map((organization) => {
               const buttonConfig = getButtonConfig(organization);
               const recruitmentStatus = getRecruitmentStatus(organization);
               const ButtonIcon = buttonConfig.icon;
@@ -696,14 +767,26 @@ const Organization = () => {
 
                   {/* Apply Button */}
                   <div className="p-4 bg-gray-50 border-t border-gray-100">
-                    <button
-                      onClick={() => !buttonConfig.disabled && handleApply(organization)}
-                      disabled={buttonConfig.disabled}
-                      className={`w-full ${buttonConfig.buttonClass}`}
-                    >
-                      <ButtonIcon className="w-5 h-5" />
-                      {buttonConfig.text}
-                    </button>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <Link
+                        to={`/organizations/${organization._id}`}
+                        className="app-btn-secondary w-full justify-center"
+                      >
+                        <Building2 className="w-5 h-5" />
+                        Details
+                      </Link>
+
+                      {user && (
+                        <button
+                          onClick={() => !buttonConfig.disabled && handleApply(organization)}
+                          disabled={buttonConfig.disabled}
+                          className={`w-full ${buttonConfig.buttonClass}`}
+                        >
+                          <ButtonIcon className="w-5 h-5" />
+                          {buttonConfig.text}
+                        </button>
+                      )}
+                    </div>
                     
                     <div className="min-h-10 mt-2">
                       {recruitmentStatus.deadline && recruitmentStatus.isOpen && (
@@ -712,21 +795,13 @@ const Organization = () => {
                         </p>
                       )}
 
-                      {!buttonConfig.disabled && buttonConfig.text === 'Apply Now' && (
+                      {!user ? (
                         <p className="text-xs text-gray-500 text-center">
-                          Join this organization and be part of the community
+                          Sign in to unlock the apply button
                         </p>
-                      )}
-
-                      {buttonConfig.disabled && buttonConfig.text === 'Sign In to Apply' && (
+                      ) : (
                         <p className="text-xs text-gray-500 text-center">
-                          Please sign in to apply to organizations
-                        </p>
-                      )}
-
-                      {buttonConfig.disabled && buttonConfig.text.includes('Recruitment Closed') && (
-                        <p className="text-xs text-gray-500 text-center">
-                          This organization is not accepting applications right now
+                          {buttonConfig.helperText}
                         </p>
                       )}
                     </div>
@@ -736,6 +811,19 @@ const Organization = () => {
             })}
           </AnimatePresence>
         </div>
+
+        {filteredOrganizations.length > 0 && (
+          <div className="mt-8 space-y-3">
+            <p className="text-sm text-slate-600 text-center">
+              Showing {showingStart}-{showingEnd} of {filteredOrganizations.length} organizations
+            </p>
+            <PaginationControls
+              currentPage={currentPageSafe}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
+          </div>
+        )}
 
         {/* Empty State */}
         {filteredOrganizations.length === 0 && !loading && (

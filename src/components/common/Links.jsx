@@ -1,13 +1,12 @@
 import { NavLink } from "react-router";
-import { Home, LayoutDashboard, FileText, Users, Info, HeartPulse } from "lucide-react";
+import { Home, FileText, Users, Info, HeartPulse } from "lucide-react";
 import useAuth from "../../hooks/useAuth";
 
-const Links = () => {
+const Links = ({ onLinkClick }) => {
   const { user } = useAuth();
 
   const allNavItems = [
     { to: '/', icon: Home, label: 'Home' },
-    { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', requiresAuth: true },
     { to: '/events', icon: FileText, label: 'Events' },
     { to: '/organization', icon: Users, label: 'Organization' },
     { to: '/blood-bank', icon: HeartPulse, label: 'Blood Bank' },
@@ -18,21 +17,28 @@ const Links = () => {
     !item.requiresAuth || (item.requiresAuth && user)
   );
 
+  const handleClick = (label) => {
+    if (typeof onLinkClick === "function") {
+      onLinkClick(label);
+    }
+  };
+
   return (
-    <div className="flex flex-col md:flex-row gap-2 md:gap-1">
+    <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-1.5">
       {navItems.map(({ to, icon: Icon, label }) => (
         <li key={to} className="list-none">
           <NavLink
             to={to}
+            onClick={() => handleClick(label)}
             className={({ isActive }) =>
-              `flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 text-sm font-medium ${
+              `flex items-center gap-2 px-3 lg:px-4 py-2 rounded-full transition-all duration-200 text-sm font-medium border ${
                 isActive
-                  ? 'bg-[#C6E7FF] text-gray-800 shadow-sm'
-                  : 'text-gray-800 hover:text-gray-900 hover:bg-gray-100'
+                  ? 'bg-gradient-to-r from-[#dff2ff] to-[#cae8ff] border-[#9bd5ff] text-slate-900 shadow-sm'
+                  : 'bg-white border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50 hover:border-slate-200'
               }`
             }
           >
-            <Icon size={18} />
+            <Icon size={16} />
             <span>{label}</span>
           </NavLink>
         </li>

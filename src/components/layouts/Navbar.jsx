@@ -1,8 +1,8 @@
 import React from "react";
 import Links from "../common/Links";
 import { NavLink } from "react-router";
-import { LogIn, LogOut, Menu, X, User, Settings, UserCheck } from "lucide-react";
-import { useState } from "react";
+import { LogIn, LogOut, Menu, X, User, Settings, UserCheck, LayoutDashboard, UserPlus } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import Logo from "../common/Logo";
 import useAuth from "../../hooks/useAuth";
 import toast from 'react-hot-toast';
@@ -21,10 +21,25 @@ const readCachedUserInfo = () => {
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [showProfileTooltip, setShowProfileTooltip] = useState(false);
+  const [showMobileProfilePopover, setShowMobileProfilePopover] = useState(false);
+  const profileButtonRef = useRef(null);
+  const mobileProfileRef = useRef(null);
   const { user, logOut } = useAuth();
   const { userInfo } = useUserRole();
   const cachedUserInfo = readCachedUserInfo();
   const avatarUrl = user?.photoURL || userInfo?.photoURL || cachedUserInfo?.photoURL || '/default-avatar.png';
+  const roleKey = String(userInfo?.role || "user").toLowerCase();
+  const dashboardStyles = {
+    student: "bg-gradient-to-r from-sky-50 to-blue-100 border-sky-200 text-sky-800 hover:from-sky-100 hover:to-blue-200",
+    organization: "bg-gradient-to-r from-emerald-50 to-green-100 border-emerald-200 text-emerald-800 hover:from-emerald-100 hover:to-green-200",
+    org: "bg-gradient-to-r from-emerald-50 to-green-100 border-emerald-200 text-emerald-800 hover:from-emerald-100 hover:to-green-200",
+    admin: "bg-gradient-to-r from-rose-50 to-red-100 border-rose-200 text-rose-800 hover:from-rose-100 hover:to-red-200",
+    "super-admin": "bg-gradient-to-r from-rose-50 to-red-100 border-rose-200 text-rose-800 hover:from-rose-100 hover:to-red-200",
+    superadmin: "bg-gradient-to-r from-rose-50 to-red-100 border-rose-200 text-rose-800 hover:from-rose-100 hover:to-red-200",
+    user: "bg-gradient-to-r from-slate-50 to-slate-100 border-slate-200 text-slate-700 hover:from-slate-100 hover:to-slate-200",
+  };
+  const dashboardButtonClass = dashboardStyles[roleKey] || dashboardStyles.user;
   const displayName =
     user?.displayName ||
     userInfo?.organizationName ||
@@ -121,6 +136,23 @@ const Navbar = () => {
     );
   };
 
+  const isTouchPreferred = () => {
+    if (typeof window === "undefined") return false;
+    return !window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  };
+
+  const handleDesktopAvatarClick = () => {
+    if (isTouchPreferred()) {
+      setShowProfileTooltip((prev) => !prev);
+      return;
+    }
+    handleUserProfileClick();
+  };
+
+  const handleMobileAvatarClick = () => {
+    setShowMobileProfilePopover((prev) => !prev);
+  };
+
   // Enhanced mobile menu close with toast
   const handleMobileMenuClose = () => {
     setIsOpen(false);
@@ -129,6 +161,31 @@ const Navbar = () => {
       icon: '👋'
     });
   };
+
+  useEffect(() => {
+    const handleOutside = (event) => {
+      if (
+        profileButtonRef.current &&
+        !profileButtonRef.current.contains(event.target)
+      ) {
+        setShowProfileTooltip(false);
+      }
+
+      if (
+        mobileProfileRef.current &&
+        !mobileProfileRef.current.contains(event.target)
+      ) {
+        setShowMobileProfilePopover(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("touchstart", handleOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("touchstart", handleOutside);
+    };
+  }, []);
 
   // console.log(userInfo)
 
@@ -186,19 +243,38 @@ const Navbar = () => {
             ) : (
               <>
                 {/* User Info and Sign Out - Desktop */}
-                <div className="hidden md:flex items-center gap-4">
+                <div className="hidden md:flex items-center gap-3 lg:gap-4">
+                  <NavLink
+                    to="/dashboard"
+                    className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-full border shadow-sm transition-all duration-200 transform hover:-translate-y-0.5 font-semibold text-sm ${dashboardButtonClass}`}
+                  >
+                    <LayoutDashboard className="w-4 h-4" />
+                    Dashboard
+                  </NavLink>
+
                   <button
-                    onClick={handleUserProfileClick}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 transition-colors group cursor-pointer"
+                    ref={profileButtonRef}
+                    onClick={handleDesktopAvatarClick}
+                    className="relative p-1 rounded-full hover:bg-blue-50 transition-colors group cursor-pointer"
+                    aria-label="Open profile"
                   >
                     <img
                       src={avatarUrl}
                       alt="User Avatar"
-                      className="w-8 h-8 rounded-full object-cover border-2 border-blue-400 group-hover:border-blue-500"
+                      className="w-9 h-9 rounded-full object-cover border-2 border-blue-300 group-hover:border-blue-500"
                     />
-                    <span className="text-gray-700 font-medium max-w-32 truncate">
-                      {displayName}
-                    </span>
+                    <div
+                      className={`absolute top-12 right-0 z-30 w-max max-w-xs transition-opacity duration-150 ${
+                        showProfileTooltip
+                          ? "opacity-100"
+                          : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-events-none"
+                      }`}
+                    >
+                      <div className="rounded-lg border border-slate-200 bg-white shadow-lg px-3 py-2 text-left">
+                        <p className="text-sm font-semibold text-slate-900 truncate max-w-[200px]">{displayName}</p>
+                        <p className="text-xs text-slate-500 capitalize">{userInfo?.role || "user"}</p>
+                      </div>
+                    </div>
                   </button>
                   
                   <button
@@ -211,9 +287,17 @@ const Navbar = () => {
                 </div>
 
                 {/* Mobile User Actions */}
-                <div className="md:hidden flex items-center gap-2">
+                <div className="md:hidden flex items-center gap-2" ref={mobileProfileRef}>
+                  <NavLink
+                    to="/dashboard"
+                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-2 text-xs font-semibold border shadow-sm ${dashboardButtonClass}`}
+                  >
+                    <LayoutDashboard className="w-4 h-4" />
+                    Dash
+                  </NavLink>
+
                   <button
-                    onClick={handleUserProfileClick}
+                    onClick={handleMobileAvatarClick}
                     className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-semibold overflow-hidden"
                     aria-label="User profile"
                   >
@@ -229,6 +313,14 @@ const Navbar = () => {
                       </div>
                     )}
                   </button>
+
+                  {showMobileProfilePopover && (
+                    <div className="absolute top-16 right-16 z-40 rounded-lg border border-slate-200 bg-white shadow-lg px-3 py-2 min-w-[180px]">
+                      <p className="text-sm font-semibold text-slate-900 truncate">{displayName}</p>
+                      <p className="text-xs text-slate-500 truncate">{user?.email}</p>
+                      <p className="text-xs text-sky-600 font-medium capitalize mt-0.5">{userInfo?.role || "user"}</p>
+                    </div>
+                  )}
                   
                   <button
                     onClick={handleSignOut}
@@ -256,17 +348,29 @@ const Navbar = () => {
                 <X size={18} />
               </button>
             </div>
+
             <Links onLinkClick={handleNavLinkClick} />
-            
+
+            {user && (
+              <NavLink
+                to="/dashboard"
+                onClick={() => setIsOpen(false)}
+                className={`mt-3 inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold border shadow-sm ${dashboardButtonClass}`}
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                Open Dashboard
+              </NavLink>
+            )}
+
             {/* Mobile User Info */}
             {user && (
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <div className="flex items-center gap-3 px-2 py-3 bg-blue-50 rounded-lg">
                   <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden">
                     {avatarUrl ? (
-                      <img 
-                        src={avatarUrl} 
-                        alt="User Avatar" 
+                      <img
+                        src={avatarUrl}
+                        alt="User Avatar"
                         className="w-full h-full object-cover"
                       />
                     ) : (
@@ -275,6 +379,7 @@ const Navbar = () => {
                       </div>
                     )}
                   </div>
+
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-800 truncate">
                       {displayName}
