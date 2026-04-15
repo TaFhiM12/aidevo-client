@@ -413,15 +413,15 @@ const TopBar = ({ sidebarOpen, setSidebarOpen, userInfo, user }) => {
   const avatarUrl = user?.photoURL || userInfo?.photoURL || '/default-avatar.png';
 
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-[17.5px]">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+    <header className="sticky top-0 z-30 border-b border-white/70 bg-white/96 shadow-[0_8px_28px_rgba(15,23,42,0.04)] supports-[backdrop-filter]:bg-white/82 supports-[backdrop-filter]:backdrop-blur-2xl md:shadow-[0_14px_40px_rgba(15,23,42,0.08)]">
+      <div className="flex items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+        <div className="flex items-center gap-3 sm:gap-4">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 hover:bg-gray-100 rounded-lg"
+            className="rounded-2xl border border-transparent p-2.5 text-slate-600 transition-all duration-200 hover:border-slate-200 hover:bg-white/80 hover:text-slate-900"
           >
             <svg
-              className="w-5 h-5"
+              className="h-5 w-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -434,22 +434,25 @@ const TopBar = ({ sidebarOpen, setSidebarOpen, userInfo, user }) => {
               />
             </svg>
           </button>
-          <h1 className="text-xl font-semibold text-gray-900">
-            {getPageName()}
-          </h1>
+          <div>
+            <h1 className="text-lg font-semibold tracking-tight text-slate-900 sm:text-xl">
+              {getPageName()}
+            </h1>
+            <p className="hidden text-xs text-slate-500 sm:block">Dashboard control center</p>
+          </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* Search */}
           <div className="relative hidden md:block">
-            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <button
               onClick={() => setIsSearchOpen(true)}
-              className="pl-10 pr-3 py-2 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors w-64 text-left text-sm text-gray-500 flex items-center justify-between"
+              className="flex w-72 items-center justify-between rounded-2xl border border-slate-200/80 bg-white/80 py-2.5 pl-10 pr-3 text-left text-sm text-slate-500 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-white"
             >
               <span>Search pages, events, applications...</span>
-              <span className="inline-flex items-center gap-1 text-xs text-gray-400">
-                <Command className="w-3 h-3" />
+              <span className="inline-flex items-center gap-1 text-xs text-slate-400">
+                <Command className="h-3 w-3" />
                 K
               </span>
             </button>
@@ -459,23 +462,23 @@ const TopBar = ({ sidebarOpen, setSidebarOpen, userInfo, user }) => {
           <div className="relative">
             <button
               onClick={() => setOpenNotifications((prev) => !prev)}
-              className="relative p-2 hover:bg-gray-100 rounded-lg"
+              className="relative rounded-2xl border border-transparent p-2.5 text-slate-600 transition-all duration-200 hover:border-slate-200 hover:bg-white/80 hover:text-slate-900"
             >
-              <Bell className="w-5 h-5 text-gray-600" />
+              <Bell className="h-5 w-5" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                <span className="absolute -right-1 -top-1 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-gradient-to-r from-rose-500 to-red-500 px-1 text-xs text-white shadow-sm shadow-rose-200">
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}
             </button>
 
             {openNotifications && (
-              <div className="absolute right-0 mt-2 w-96 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-                  <h3 className="font-semibold text-gray-900">Notifications</h3>
+              <div className="absolute right-0 z-50 mt-2 w-96 overflow-hidden rounded-3xl border border-white/70 bg-white/96 shadow-[0_24px_60px_rgba(15,23,42,0.16)] backdrop-blur-2xl">
+                <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+                  <h3 className="font-semibold text-slate-900">Notifications</h3>
                   <button
                     onClick={markAllAsRead}
-                    className="text-xs text-sky-600 hover:text-sky-700 font-medium"
+                    className="text-xs font-medium text-sky-600 hover:text-sky-700"
                   >
                     Mark all as read
                   </button>
@@ -483,7 +486,7 @@ const TopBar = ({ sidebarOpen, setSidebarOpen, userInfo, user }) => {
 
                 <div className="max-h-96 overflow-y-auto">
                   {recentNotifications.length === 0 && (
-                    <p className="px-4 py-6 text-sm text-gray-500 text-center">
+                    <p className="px-4 py-6 text-center text-sm text-slate-500">
                       No notifications yet.
                     </p>
                   )}
@@ -496,13 +499,13 @@ const TopBar = ({ sidebarOpen, setSidebarOpen, userInfo, user }) => {
                           markAsRead(String(item._id));
                         }
                       }}
-                      className={`w-full text-left px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors ${
-                        item.read ? "bg-white" : "bg-sky-50"
-                      }`}
+                      className={`w-full border-b border-slate-50 px-4 py-3 text-left transition-colors ${
+                        item.read ? "bg-white" : "bg-sky-50/80"
+                      } hover:bg-slate-50/80`}
                     >
-                      <p className="text-sm font-semibold text-gray-900">{item.title}</p>
-                      <p className="text-xs text-gray-600 mt-1">{item.message}</p>
-                      <p className="text-[11px] text-gray-400 mt-2">
+                      <p className="text-sm font-semibold text-slate-900">{item.title}</p>
+                      <p className="mt-1 text-xs text-slate-600">{item.message}</p>
+                      <p className="mt-2 text-[11px] text-slate-400">
                         {formatNotificationTime(item.createdAt)}
                       </p>
                     </button>
@@ -513,45 +516,41 @@ const TopBar = ({ sidebarOpen, setSidebarOpen, userInfo, user }) => {
           </div>
 
           {/* User Info */}
-          <div className="flex items-center gap-3">
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-medium text-gray-900">
-                {getUserDisplayName()}
-              </p>
-              <p className="text-xs text-gray-500 capitalize">
-                {getUserRole()}
-              </p>
+          <div className="flex items-center gap-3 rounded-2xl border border-slate-200/70 bg-white/70 px-3 py-2 shadow-sm">
+            <div className="hidden text-right sm:block">
+              <p className="text-sm font-medium text-slate-900">{getUserDisplayName()}</p>
+              <p className="text-xs text-slate-500 capitalize">{getUserRole()}</p>
             </div>
             <img
               src={avatarUrl}
               alt="Profile"
-              className="w-8 h-8 rounded-lg object-cover"
+              className="h-9 w-9 rounded-2xl object-cover ring-2 ring-white shadow-sm"
             />
           </div>
         </div>
       </div>
 
       {isSearchOpen && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-[1px] z-[60] flex items-start justify-center pt-24 px-4">
+        <div className="fixed inset-0 z-[60] flex items-start justify-center bg-slate-950/35 px-4 pt-24 backdrop-blur-[2px]">
           <div
             ref={searchContainerRef}
-            className="w-full max-w-2xl bg-white border border-gray-200 rounded-2xl shadow-2xl overflow-hidden"
+            className="w-full max-w-2xl overflow-hidden rounded-3xl border border-white/70 bg-white/96 shadow-[0_24px_80px_rgba(15,23,42,0.22)] backdrop-blur-2xl"
           >
-            <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
-              <Search className="w-4 h-4 text-gray-400" />
+            <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-3">
+              <Search className="h-4 w-4 text-slate-400" />
               <input
                 autoFocus
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Search anything in dashboard..."
-                className="w-full text-sm outline-none"
+                className="w-full bg-transparent text-sm outline-none"
               />
-              {searchLoading && <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />}
+              {searchLoading && <Loader2 className="h-4 w-4 animate-spin text-slate-400" />}
             </div>
 
             <div className="max-h-[420px] overflow-y-auto">
               {searchResults.length === 0 ? (
-                <p className="px-4 py-6 text-sm text-gray-500 text-center">
+                <p className="px-4 py-6 text-center text-sm text-slate-500">
                   No matches found. Try broader keywords.
                 </p>
               ) : (
@@ -559,16 +558,16 @@ const TopBar = ({ sidebarOpen, setSidebarOpen, userInfo, user }) => {
                   <button
                     key={item.id}
                     onClick={() => handleSelectResult(item)}
-                    className={`w-full text-left px-4 py-3 border-b border-gray-50 transition-colors ${
-                      selectedResultIndex === index ? "bg-sky-50" : "hover:bg-gray-50"
+                    className={`w-full border-b border-slate-50 px-4 py-3 text-left transition-colors ${
+                      selectedResultIndex === index ? "bg-sky-50/80" : "hover:bg-slate-50/80"
                     }`}
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <p className="text-sm font-medium text-gray-900">{item.title}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">{item.subtitle}</p>
+                        <p className="text-sm font-medium text-slate-900">{item.title}</p>
+                        <p className="mt-0.5 text-xs text-slate-500">{item.subtitle}</p>
                       </div>
-                      <span className="text-[11px] px-2 py-1 rounded-full bg-gray-100 text-gray-600">
+                      <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] text-slate-600">
                         {item.type}
                       </span>
                     </div>
@@ -577,7 +576,7 @@ const TopBar = ({ sidebarOpen, setSidebarOpen, userInfo, user }) => {
               )}
             </div>
 
-            <div className="px-4 py-2 bg-gray-50 text-[11px] text-gray-500 flex items-center justify-between">
+            <div className="flex items-center justify-between bg-slate-50 px-4 py-2 text-[11px] text-slate-500">
               <span>Use ↑ ↓ to navigate and Enter to open</span>
               <span>Esc to close</span>
             </div>
