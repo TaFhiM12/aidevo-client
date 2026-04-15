@@ -1,6 +1,5 @@
 import React, { useState } from "react";
-import { motion } from "framer-motion";
-import { RefreshCw, Sparkles, TrendingUp, AlertCircle } from "lucide-react";
+import { RefreshCw, AlertCircle, Filter } from "lucide-react";
 import useAuth from "../../../hooks/useAuth";
 import useUserRole from "../../../hooks/useUserRole";
 import Loading from "../../../components/common/Loading";
@@ -11,6 +10,7 @@ const RecommendationPage = () => {
   const { user } = useAuth();
   const { userInfo, loading, error } = useUserRole();
   const [refreshKey, setRefreshKey] = useState(0);
+  const [activeView, setActiveView] = useState("all");
 
   const normalizeInterests = (value) => {
     if (Array.isArray(value)) {
@@ -55,37 +55,10 @@ const RecommendationPage = () => {
   const studentIdentifier = userInfo?.uid || userInfo?._id || userInfo?.studentId;
 
   return (
-    <div className="min-h-full  p-2 md:p-4 rounded-2xl">
-      <motion.div
-        key={refreshKey}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="max-w-7xl mx-auto"
-      >
-        <div className="bg-white/80 backdrop-blur-sm border border-gray-100 rounded-2xl p-6 md:p-8 mb-8 shadow-sm">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-sky-100 text-sky-700 text-sm font-semibold mb-3">
-                <Sparkles className="w-4 h-4" />
-                Recommended For You
-              </div>
-              <h1 className="text-3xl font-bold text-gray-900">Recommended Events</h1>
-              <p className="text-gray-600 mt-2">
-                Explore relevant and trending campus opportunities based on your interests and activity.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setRefreshKey((prev) => prev + 1)}
-              className="app-btn-primary"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Refresh
-            </button>
-          </div>
-
-          <div className="mt-5 flex flex-wrap items-center gap-2 text-sm text-gray-600">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-sky-50/40 px-4 py-2 pb-10">
+      <div key={refreshKey} className="max-w-7xl mx-auto">
+        <div className="app-surface p-4 mb-6">
+          <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
             <span className="font-semibold text-gray-800">Interests:</span>
             {interests.length > 0 ? (
               interests.map((interest) => (
@@ -101,31 +74,66 @@ const RecommendationPage = () => {
                 No interests set yet
               </span>
             )}
+
+            <button
+              type="button"
+              onClick={() => setRefreshKey((prev) => prev + 1)}
+              className="app-btn-primary ml-auto"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Refresh
+            </button>
+          </div>
+
+          <div className="mt-3 rounded-2xl border border-slate-200 bg-white/70 p-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-slate-500">
+                <Filter className="w-4 h-4" />
+                <span>View</span>
+              </div>
+              {[
+                { value: "all", label: "All" },
+                { value: "recommended", label: "Recommended" },
+                { value: "trending", label: "Trending" },
+              ].map((option) => {
+                const isActive = activeView === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    onClick={() => setActiveView(option.value)}
+                    className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 ${
+                      isActive
+                        ? "bg-gradient-to-r from-sky-500 to-blue-500 text-white shadow-sm"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    <span>{option.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
-        <EventRecommendationsSection
-          key={`recommended-${refreshKey}`}
-          studentId={studentIdentifier}
-          requesterUid={user.uid}
-          title="Recommended For You"
-          limit={6}
-        />
+        {(activeView === "all" || activeView === "recommended") && (
+          <EventRecommendationsSection
+            key={`recommended-${refreshKey}`}
+            studentId={studentIdentifier}
+            requesterUid={user.uid}
+            title=""
+            limit={6}
+          />
+        )}
 
-        <div className="my-8 border-t border-gray-200" />
-
-        <div className="flex items-center gap-2 text-gray-700 mb-2">
-          <TrendingUp className="w-5 h-5" />
-          <span className="font-semibold">Campus Momentum</span>
-        </div>
-
-        <TrendingEventsSection
-          key={`trending-${refreshKey}`}
-          interests={interests}
-          title="Trending Events"
-          limit={6}
-        />
-      </motion.div>
+        {(activeView === "all" || activeView === "trending") && (
+          <TrendingEventsSection
+            key={`trending-${refreshKey}`}
+            interests={interests}
+            title=""
+            limit={6}
+          />
+        )}
+      </div>
     </div>
   );
 };

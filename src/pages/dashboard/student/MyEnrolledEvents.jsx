@@ -10,9 +10,7 @@ import {
   CheckCircle2,
   AlertCircle,
   LoaderCircle,
-  Wallet,
-  Activity,
-  BarChart3,
+  Filter,
 } from "lucide-react";
 import useAuth from "../../../hooks/useAuth";
 import API from "../../../utils/api";
@@ -121,27 +119,6 @@ const MyEnrolledEvents = () => {
     return map;
   }, [payments]);
 
-  const engagement = useMemo(() => {
-    const upcomingCount = classified.upcoming.length;
-    const ongoingCount = classified.ongoing.length;
-    const completedCount = classified.completed.length;
-    const paidEvents = items.filter(
-      (item) => Number(item.event?.fee || 0) > 0 && paymentByEventId.has(String(item.event?._id))
-    ).length;
-
-    const completionRate = upcomingCount + ongoingCount + completedCount > 0
-      ? ((completedCount / (upcomingCount + ongoingCount + completedCount)) * 100).toFixed(1)
-      : "0.0";
-
-    return {
-      upcomingCount,
-      ongoingCount,
-      completedCount,
-      paidEvents,
-      completionRate,
-    };
-  }, [classified, items, paymentByEventId]);
-
   const formatDateTime = (dateString) => {
     if (!dateString) return "TBA";
     const date = new Date(dateString);
@@ -185,40 +162,17 @@ const MyEnrolledEvents = () => {
     return (
       <div className="space-y-6">
         <div className="app-surface p-6 animate-pulse">
-          <div className="h-8 w-36 rounded bg-gray-200 mb-3" />
-          <div className="h-4 w-72 rounded bg-gray-200 mb-4" />
+          <div className="h-11 rounded-xl bg-gray-200 mb-4" />
           <div className="h-11 rounded-xl bg-gray-200" />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[1, 2, 3].map((item) => (
-            <div key={item} className="app-surface p-4 animate-pulse">
-              <div className="h-4 w-16 rounded bg-gray-200 mb-3" />
-              <div className="h-6 w-10 rounded bg-gray-200 mb-2" />
-              <div className="h-4 w-24 rounded bg-gray-200" />
-            </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-          {[1, 2, 3, 4].map((item) => (
-            <div key={item} className="app-surface rounded-xl px-4 py-3 animate-pulse">
-              <div className="h-3 w-20 rounded bg-gray-200 mb-2" />
-              <div className="h-6 w-16 rounded bg-gray-200" />
-            </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-          {[1, 2, 3].map((item) => (
-            <div key={item} className="app-surface animate-pulse overflow-hidden">
-              <div className="h-40 w-full bg-gray-200" />
-              <div className="p-5 space-y-3">
-                <div className="h-5 w-2/3 rounded bg-gray-200" />
-                <div className="h-4 w-full rounded bg-gray-200" />
-                <div className="h-4 w-3/4 rounded bg-gray-200" />
-                <div className="h-8 w-28 rounded bg-gray-200" />
-              </div>
+            <div key={item} className="app-surface p-5 animate-pulse min-h-[260px]">
+              <div className="h-16 w-16 rounded-xl bg-gray-200 mb-4" />
+              <div className="h-6 w-2/3 rounded bg-gray-200 mb-3" />
+              <div className="h-4 w-1/2 rounded bg-gray-200 mb-2" />
+              <div className="h-4 w-3/4 rounded bg-gray-200" />
             </div>
           ))}
         </div>
@@ -227,15 +181,10 @@ const MyEnrolledEvents = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-sky-50/40 pb-10">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-sky-50/40 px-4 py-2 pb-10">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="app-surface p-6">
-          <h1 className="text-2xl font-bold text-slate-900">My Events</h1>
-          <p className="text-slate-600 mt-1">
-            Real attendance records from events you joined.
-          </p>
-
-          <div className="mt-4 relative">
+          <div className="relative mb-4">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               value={searchTerm}
@@ -243,6 +192,40 @@ const MyEnrolledEvents = () => {
               placeholder="Search events, organizations, or locations"
               className="w-full rounded-xl border border-slate-200 pl-10 pr-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-200"
             />
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white/70 p-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-slate-500">
+                <Filter className="w-4 h-4" />
+                <span>Status</span>
+              </div>
+              {tabs.map((tab) => {
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 ${
+                      isActive
+                        ? "bg-gradient-to-r from-sky-500 to-blue-500 text-white shadow-sm"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    <span>{tab.label}</span>
+                    <span
+                      className={`rounded-full px-1.5 py-0.5 text-xs ${
+                        isActive
+                          ? "bg-white/20 text-white"
+                          : "bg-white text-slate-600"
+                      }`}
+                    >
+                      {tab.count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
@@ -253,78 +236,30 @@ const MyEnrolledEvents = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`app-surface px-4 py-3 text-left transition ${
-                  activeTab === tab.id
-                    ? "border-sky-300 bg-sky-50"
-                    : "hover:border-slate-300"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <Icon className="w-4 h-4 text-slate-600" />
-                  <span className="text-lg font-semibold text-slate-900">{tab.count}</span>
-                </div>
-                <p className="text-sm text-slate-600 mt-1">{tab.label}</p>
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-          <div className="app-surface rounded-xl px-4 py-3">
-            <p className="text-xs text-slate-500">Upcoming</p>
-            <p className="text-xl font-bold text-slate-900 flex items-center gap-1">
-              <Activity className="w-4 h-4 text-sky-600" />
-              {engagement.upcomingCount}
-            </p>
-          </div>
-          <div className="app-surface rounded-xl px-4 py-3">
-            <p className="text-xs text-slate-500">Ongoing</p>
-            <p className="text-xl font-bold text-slate-900">{engagement.ongoingCount}</p>
-          </div>
-          <div className="app-surface rounded-xl px-4 py-3">
-            <p className="text-xs text-slate-500">Completion Rate</p>
-            <p className="text-xl font-bold text-slate-900 flex items-center gap-1">
-              <BarChart3 className="w-4 h-4 text-emerald-600" />
-              {engagement.completionRate}%
-            </p>
-          </div>
-          <div className="app-surface rounded-xl px-4 py-3">
-            <p className="text-xs text-slate-500">Paid Event Access</p>
-            <p className="text-xl font-bold text-slate-900 flex items-center gap-1">
-              <Wallet className="w-4 h-4 text-violet-600" />
-              {engagement.paidEvents}
-            </p>
-          </div>
-        </div>
-
         {filteredList.length === 0 ? (
           <div className="app-surface p-8 text-center text-slate-600">
             No events found in this section.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {visibleEvents.map((item) => (
-              <div key={item.key} className="app-surface overflow-hidden">
+              <div
+                key={item.key}
+                className="app-surface overflow-hidden hover:shadow-md transition-all duration-300"
+              >
                 {item.event?.cover ? (
                   <img
                     src={item.event.cover}
                     alt={item.event.title}
-                    className="h-40 w-full object-cover"
+                    className="h-32 w-full object-cover"
                   />
                 ) : (
-                  <div className="h-40 w-full bg-gradient-to-r from-sky-500 to-cyan-500" />
+                  <div className="h-32 w-full bg-gradient-to-r from-sky-500 to-cyan-500" />
                 )}
 
-                <div className="p-5 space-y-3">
+                <div className="p-4 space-y-2.5">
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-semibold text-slate-900 leading-snug">
+                    <h3 className="font-semibold text-slate-900 leading-snug line-clamp-2">
                       {item.event?.title || "Untitled Event"}
                     </h3>
                     <span className={`text-xs px-2 py-1 rounded-full ${phaseBadge(item.phase)}`}>

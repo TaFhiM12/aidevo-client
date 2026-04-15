@@ -74,16 +74,8 @@ const StudentSettings = () => {
 
   return (
     <div className="mx-auto space-y-6">
-      {/* Header */}
-      <div className="app-surface p-6">
-        <h1 className="text-2xl font-bold text-slate-900">Student Settings</h1>
-        <p className="text-slate-600 mt-1">
-          Manage notifications, visibility, and engagement preferences.
-        </p>
-      </div>
-
       {/* Tab Bar */}
-      <div className="sticky top-20 z-20 flex gap-2 overflow-x-auto rounded-2xl border border-slate-200/70 bg-white/96 p-1 backdrop-blur-2xl sm:gap-3 sm:p-1.5">
+      <div className="sticky  flex gap-2 overflow-x-auto rounded-2xl border border-slate-200/70 bg-white/96 p-1 backdrop-blur-2xl sm:gap-3 sm:p-1.5">
         {SETTINGS_TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;

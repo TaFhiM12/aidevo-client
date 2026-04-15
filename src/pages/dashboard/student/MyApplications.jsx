@@ -28,11 +28,11 @@ const MyApplications = () => {
   const [selectedApplication, setSelectedApplication] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
 
-  const statusOptions = [
-    { value: 'all', label: 'All Applications', color: 'gray', icon: Users },
-    { value: 'pending', label: 'Pending', color: 'yellow', icon: Clock },
-    { value: 'approved', label: 'Approved', color: 'green', icon: CheckCircle },
-    { value: 'rejected', label: 'Rejected', color: 'red', icon: XCircle },
+  const statusToggleOptions = [
+    { value: 'all', label: 'All' },
+    { value: 'pending', label: 'Pending' },
+    { value: 'approved', label: 'Approved' },
+    { value: 'rejected', label: 'Rejected' },
   ];
 
   const {
@@ -72,6 +72,22 @@ const MyApplications = () => {
 
     return filtered;
   }, [applications, searchTerm, selectedStatus]);
+
+  const statusCounts = useMemo(() => {
+    const counts = {
+      all: applications.length,
+      pending: 0,
+      approved: 0,
+      rejected: 0,
+    };
+
+    applications.forEach((app) => {
+      const key = String(app.status || '').toLowerCase();
+      if (key in counts) counts[key] += 1;
+    });
+
+    return counts;
+  }, [applications]);
 
   const {
     visibleItems: visibleApplications,
@@ -189,38 +205,6 @@ const MyApplications = () => {
           </MotionDiv>
         )}
 
-        {/* Stats */}
-        <MotionDiv
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8"
-        >
-          {statusOptions.map((status) => {
-            const Icon = status.icon;
-            const count = applications.filter((app) =>
-              status.value === 'all' ? true : app.status === status.value
-            ).length;
-
-            return (
-              <div
-                key={status.value}
-                className="app-surface p-6 text-center hover:shadow-md transition-all duration-300"
-              >
-                <div
-                  className={`w-12 h-12 rounded-xl ${getStatusColor(
-                    status.value
-                  )} flex items-center justify-center mx-auto mb-3`}
-                >
-                  <Icon className="w-6 h-6" />
-                </div>
-                <div className="text-2xl font-bold text-gray-900">{count}</div>
-                <div className="text-sm text-gray-600">{status.label}</div>
-              </div>
-            );
-          })}
-        </MotionDiv>
-
         {/* Search and Filters */}
         <MotionDiv
           initial={{ opacity: 0, y: 20 }}
@@ -228,7 +212,7 @@ const MyApplications = () => {
           transition={{ delay: 0.2 }}
           className="app-surface p-6 mb-8"
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -241,20 +225,39 @@ const MyApplications = () => {
               />
             </div>
 
-            {/* Status Filter */}
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200 appearance-none"
-              >
-                {statusOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+            {/* Status Toggle Filter */}
+            <div className="rounded-2xl border border-slate-200 bg-white/70 p-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-slate-500">
+                  <Filter className="w-4 h-4" />
+                  <span>Status</span>
+                </div>
+                {statusToggleOptions.map((option) => {
+                  const isActive = selectedStatus === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      onClick={() => setSelectedStatus(option.value)}
+                      className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 ${
+                        isActive
+                          ? 'bg-gradient-to-r from-sky-500 to-blue-500 text-white shadow-sm'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      <span>{option.label}</span>
+                      <span
+                        className={`rounded-full px-1.5 py-0.5 text-xs ${
+                          isActive
+                            ? 'bg-white/20 text-white'
+                            : 'bg-white text-slate-600'
+                        }`}
+                      >
+                        {statusCounts[option.value]}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </MotionDiv>

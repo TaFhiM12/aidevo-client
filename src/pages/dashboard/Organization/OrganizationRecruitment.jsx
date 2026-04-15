@@ -51,12 +51,7 @@ const OrganizationRecruitment = () => {
   return (
     <div className="mx-auto space-y-6">
       <div className="app-surface p-6">
-        <h1 className="text-2xl font-bold text-slate-900">Recruitment Management</h1>
-        <p className="text-slate-600 mt-1">
-          Control whether students can apply to your organization and publish recruitment information.
-        </p>
-
-        <div className="mt-5 inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
+        <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
           <button
             type="button"
             onClick={() => setActiveSection("applications")}

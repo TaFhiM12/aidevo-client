@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router";
 import { Building2, Shield, Save, BellRing, UserPlus } from "lucide-react";
 import toast from "react-hot-toast";
 import useUserRole from "../../../hooks/useUserRole";
@@ -18,11 +19,27 @@ const defaultRecruitment = {
   deadline: "",
 };
 
+const SETTINGS_TABS = [
+  { id: "operations", label: "Operations", icon: Building2 },
+  { id: "alerts", label: "Alerts", icon: BellRing },
+  { id: "recruitment", label: "Recruitment", icon: UserPlus },
+];
+
 const OrganizationSettings = () => {
   const { userInfo } = useUserRole();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [settings, setSettings] = useState(defaultSettings);
   const [recruitment, setRecruitment] = useState(defaultRecruitment);
   const [saving, setSaving] = useState(false);
+
+  const activeTab = useMemo(() => {
+    const tab = searchParams.get("tab");
+    return SETTINGS_TABS.find((t) => t.id === tab)?.id || "operations";
+  }, [searchParams]);
+
+  const handleTabChange = (tabId) => {
+    setSearchParams({ tab: tabId }, { replace: true });
+  };
 
   useEffect(() => {
     const cacheKey = `org_settings_${userInfo?.uid || "guest"}`;
@@ -77,15 +94,30 @@ const OrganizationSettings = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <div className="app-surface p-4">
-        <h1 className="text-2xl font-bold text-slate-900">Organization Settings</h1>
-        <p className="text-slate-600 mt-1">
-          Configure operations, governance, and communication preferences in one place.
-        </p>
+    <div className="mx-auto space-y-6">
+      <div className="sticky  flex gap-2 overflow-x-auto rounded-2xl border border-slate-200/70 bg-white/96 p-1 backdrop-blur-2xl sm:gap-3 sm:p-1.5">
+        {SETTINGS_TABS.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+
+          return (
+            <button
+              key={tab.id}
+              onClick={() => handleTabChange(tab.id)}
+              className={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 sm:px-4 sm:py-3 ${
+                isActive
+                  ? "border border-sky-200/80 bg-gradient-to-r from-sky-50 to-blue-50 text-sky-800 shadow-sm shadow-sky-100/70"
+                  : "border border-transparent text-slate-600 hover:border-slate-200 hover:bg-white/80 hover:text-slate-900"
+              }`}
+            >
+              <Icon className="h-4 w-4 flex-shrink-0" />
+              <span className="hidden sm:inline">{tab.label}</span>
+            </button>
+          );
+        })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      {activeTab === "operations" && (
         <div className="app-surface p-4 space-y-4">
           <div className="flex items-center gap-2">
             <Building2 className="w-5 h-5 text-sky-600" />
@@ -112,7 +144,9 @@ const OrganizationSettings = () => {
             <option value="minimal">Minimal</option>
           </select>
         </div>
+      )}
 
+      {activeTab === "alerts" && (
         <div className="app-surface p-4 space-y-4">
           <div className="flex items-center gap-2">
             <BellRing className="w-5 h-5 text-amber-600" />
@@ -137,7 +171,9 @@ const OrganizationSettings = () => {
             />
           </label>
         </div>
+      )}
 
+      {activeTab === "recruitment" && (
         <div className="app-surface p-4 space-y-4">
           <div className="flex items-center gap-2">
             <UserPlus className="w-5 h-5 text-emerald-600" />
@@ -184,7 +220,7 @@ const OrganizationSettings = () => {
             />
           </div>
         </div>
-      </div>
+      )}
 
       <div className="app-surface p-4 flex items-center justify-between">
         <div className="inline-flex items-center gap-2">

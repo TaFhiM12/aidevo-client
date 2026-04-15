@@ -163,13 +163,7 @@ const OrganizationMembers = () => {
     return (
         <div className="space-y-6">
             <div className="app-surface p-6">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl font-bold text-slate-900">Organization Members</h1>
-                        <p className="text-slate-600 mt-1">
-                            Manage and review your verified member base for {organizationName}.
-                        </p>
-                    </div>
+                <div className="flex justify-end">
                     <button
                         onClick={exportCsv}
                         className="app-btn-secondary px-4 py-2 inline-flex items-center gap-2"

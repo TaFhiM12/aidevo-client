@@ -47,15 +47,15 @@ const TrendingEventsSection = ({ interests = "", title = "Trending Events", limi
 
   if (loading) {
     return (
-      <div className="py-8">
-        <h2 className="section-title-lg text-gray-900 mb-6">{title}</h2>
+      <div className="py-3">
+        {title ? <h2 className="section-title-lg text-gray-900 mb-6">{title}</h2> : null}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3].map((n) => (
-            <div key={n} className="bg-white rounded-2xl shadow-lg p-6 animate-pulse">
-              <div className="h-40 bg-gray-200 rounded-xl mb-4"></div>
-              <div className="h-6 bg-gray-200 rounded mb-3"></div>
-              <div className="h-4 bg-gray-200 rounded mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+            <div key={n} className="app-surface p-5 animate-pulse min-h-[260px]">
+              <div className="h-16 w-16 rounded-xl bg-gray-200 mb-4"></div>
+              <div className="h-6 w-2/3 bg-gray-200 rounded mb-3"></div>
+              <div className="h-4 w-1/2 bg-gray-200 rounded mb-2"></div>
+              <div className="h-4 w-3/4 bg-gray-200 rounded"></div>
             </div>
           ))}
         </div>
@@ -65,8 +65,8 @@ const TrendingEventsSection = ({ interests = "", title = "Trending Events", limi
 
   if (error) {
     return (
-      <section className="py-8">
-        <h2 className="section-title-lg text-gray-900 mb-6">{title}</h2>
+      <section className="py-3">
+        {title ? <h2 className="section-title-lg text-gray-900 mb-6">{title}</h2> : null}
         <div className="bg-red-50 border border-red-200 rounded-2xl p-6 flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5" />
           <div>
@@ -82,8 +82,8 @@ const TrendingEventsSection = ({ interests = "", title = "Trending Events", limi
 
   if (trendingEvents.length === 0) {
     return (
-      <section className="py-8">
-        <h2 className="section-title-lg text-gray-900 mb-6">{title}</h2>
+      <section className="py-3">
+        {title ? <h2 className="section-title-lg text-gray-900 mb-6">{title}</h2> : null}
         <div className="bg-orange-50 border border-orange-200 rounded-2xl p-6 flex items-start gap-3">
           <Compass className="w-5 h-5 text-orange-600 mt-0.5" />
           <div>
@@ -102,17 +102,19 @@ const TrendingEventsSection = ({ interests = "", title = "Trending Events", limi
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3 }}
-      className="py-8"
+      className="py-3"
     >
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <h2 className="section-title-lg text-gray-900">{title}</h2>
-          <span className="px-3 py-1 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-semibold rounded-full flex items-center gap-1">
-            <TrendingUp className="w-3 h-3" />
-            Popular
-          </span>
+      {title ? (
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <h2 className="section-title-lg text-gray-900">{title}</h2>
+            <span className="px-3 py-1 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-semibold rounded-full flex items-center gap-1">
+              <TrendingUp className="w-3 h-3" />
+              Popular
+            </span>
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <AnimatePresence>
@@ -124,9 +126,9 @@ const TrendingEventsSection = ({ interests = "", title = "Trending Events", limi
               transition={{ delay: index * 0.1 }}
               className="group"
             >
-              <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 h-full flex flex-col">
+              <div className="app-surface overflow-hidden hover:shadow-md transition-all duration-300 h-full flex flex-col">
                 {/* Event Image */}
-                <div className="relative h-40 overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200">
+                <div className="relative h-32 overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200">
                   {event.cover ? (
                     <img
                       src={event.cover}
@@ -193,7 +195,7 @@ const TrendingEventsSection = ({ interests = "", title = "Trending Events", limi
                   {/* View Button */}
                   <Link
                     to={`/events/${event._id}`}
-                    className="flex items-center justify-center gap-2 w-full px-3 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg font-semibold text-sm hover:shadow-lg transition-all duration-200 group/btn"
+                    className="app-btn-secondary w-full py-2 text-sm justify-center"
                   >
                     View Details
                     <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />

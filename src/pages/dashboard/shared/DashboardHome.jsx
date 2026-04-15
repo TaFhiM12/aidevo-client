@@ -102,13 +102,6 @@ const DashboardHome = () => {
 
   return (
     <div className="space-y-6">
-      <div className="app-surface p-6">
-        <h1 className="section-title-xl text-gray-900">Dashboard Overview</h1>
-        <p className="text-gray-600 mt-2">
-          Welcome back, {userInfo?.name || "User"}. Here is your {roleLabel.toLowerCase()} performance snapshot.
-        </p>
-      </div>
-
       {dashboardError && (
         <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-700 text-sm">
           {String(dashboardError || "Failed to load dashboard data")}

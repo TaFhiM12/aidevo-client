@@ -181,13 +181,7 @@ const OrganizationPayments = () => {
     return (
         <div className="space-y-6">
             <div className="app-surface p-6">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl font-bold text-slate-900">Payments</h1>
-                        <p className="text-slate-600 mt-1">
-                            Track paid registrations, receipts, and payout summaries.
-                        </p>
-                    </div>
+                <div className="flex justify-end">
                     <button
                         onClick={exportPayoutSummaryCsv}
                         disabled={!payments.length}

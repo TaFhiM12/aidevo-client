@@ -1,13 +1,14 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { Bell, Search, Command, Loader2 } from "lucide-react";
 import { useNotifications } from "../../../context/NotificationContext";
 import useDashboardOverview from "../../../hooks/useDashboardOverview";
 
-const TopBar = ({ sidebarOpen, onSidebarToggle, userInfo, user }) => {
+const TopBar = ({ onSidebarToggle, userInfo, user }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [openNotifications, setOpenNotifications] = useState(false);
+  const [isSearchRevealOpen, setIsSearchRevealOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
@@ -187,7 +188,7 @@ const TopBar = ({ sidebarOpen, onSidebarToggle, userInfo, user }) => {
     setSelectedResultIndex(0);
   };
 
-  const handleSelectResult = async (item) => {
+  const handleSelectResult = useCallback(async (item) => {
     if (!item) return;
 
     if (item.action === "mark-all-read") {
@@ -200,7 +201,7 @@ const TopBar = ({ sidebarOpen, onSidebarToggle, userInfo, user }) => {
       navigate(item.path);
       closeSearch();
     }
-  };
+  }, [markAllAsRead, navigate]);
 
   useEffect(() => {
     const onKeyDown = (event) => {
@@ -230,7 +231,7 @@ const TopBar = ({ sidebarOpen, onSidebarToggle, userInfo, user }) => {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [isSearchOpen, selectedResultIndex, searchResults]);
+  }, [handleSelectResult, isSearchOpen, selectedResultIndex, searchResults]);
 
   useEffect(() => {
     if (!isSearchOpen) return;
@@ -336,7 +337,7 @@ const TopBar = ({ sidebarOpen, onSidebarToggle, userInfo, user }) => {
             keywords: ["notifications", "read", "action"],
           },
         ];
-      } catch (error) {
+      } catch {
         // Keep static results when dynamic fetch fails.
       } finally {
         const ranked = candidates
@@ -355,46 +356,137 @@ const TopBar = ({ sidebarOpen, onSidebarToggle, userInfo, user }) => {
     return () => clearTimeout(timer);
   }, [isSearchOpen, searchTerm, roleBasedPages, userInfo?.role, notifications, dashboardData]);
   
-  const getPageName = () => {
+  const getPageMeta = () => {
     const path = location.pathname.split("/").pop();
+    const role = userInfo?.role || "user";
+    const displayName = getUserDisplayName();
+    const organizationName = userInfo?.organizationName || userInfo?.organization?.name || "your organization";
+
+    const dashboardSubtitleByRole = {
+      student: `Welcome back, ${displayName}. You are on track, here is your live progress snapshot.`,
+      organization: `Welcome back, ${displayName}. Monitor execution, growth, and outcomes from one command center.`,
+      admin: `Welcome back, ${displayName}. Maintain strategic oversight across system performance and governance.`,
+      "super-admin": `Welcome back, ${displayName}. Maintain strategic oversight across system performance and governance.`,
+      user: `Welcome back, ${displayName}. Here is your live performance command center.`,
+    };
     
-    // Map route paths to display names for all user types
-    const pageNames = {
+    const pageMeta = {
+      // Shared
+      dashboard: {
+        title: "Dashboard Overview",
+        subtitle: dashboardSubtitleByRole[role] || dashboardSubtitleByRole.user,
+      },
+
       // Organization Routes
-      'org-create-event': 'Create Event',
-      'org-profile': `${userInfo?.organizationName || 'Organization'} Profile`,
-      'org-events': 'Events',
-      'org-members': 'Members',
-      'org-applications': 'Recruitment',
-      'org-recruitment': 'Recruitment',
-      'org-chat': 'Communication',
-      'org-analytics': 'Analytics',
-      'org-payments': 'Payments',
-      'org-settings': 'Settings',
+      "org-create-event": {
+        title: "Create Event",
+        subtitle: "Design and launch high-impact programs with structured operational control.",
+      },
+      "org-profile": {
+        title: `${userInfo?.organizationName || "Organization"} Profile`,
+        subtitle: "Curate your institutional identity and public positioning with strategic clarity.",
+      },
+      "org-events": {
+        title: "Events",
+        subtitle: "Supervise your full event portfolio with real-time status and delivery visibility.",
+      },
+      "org-members": {
+        title: "Members",
+        subtitle: `Oversee verified member records for ${organizationName} with confidence and control.`,
+      },
+      "org-applications": {
+        title: "Recruitment",
+        subtitle: "Evaluate applicant pipelines and optimize intake quality with operational discipline.",
+      },
+      "org-recruitment": {
+        title: "Recruitment",
+        subtitle: "Control recruitment exposure, application flow, and acceptance decisions from one panel.",
+      },
+      "org-chat": {
+        title: "Communication",
+        subtitle: "Coordinate member and student communication streams in a unified workspace.",
+      },
+      "org-analytics": {
+        title: "Analytics",
+        subtitle: "Analyze conversion, participation, and growth indicators with executive-level visibility.",
+      },
+      "org-payments": {
+        title: "Payments",
+        subtitle: "Track registrations, receipts, and payout flow with audit-ready financial transparency.",
+      },
+      "org-settings": {
+        title: "Settings",
+        subtitle: "Configure governance, operations, and communication policies for reliable execution.",
+      },
       
       // Student Routes
-      'my-organizations': 'My Organizations',
-      'my-applications': 'My Applications',
-      'my-events': 'My Events',
-      'my-chat': 'My Chats',
-      'my-recommendations': 'Recommended Events',
-      'student-profile': `${user?.displayName || 'Student'}'s Profile`,
-      'student-settings': 'Settings',
+      "my-organizations": {
+        title: "My Organizations",
+        subtitle: "Stay connected with your communities and keep up with what matters most.",
+      },
+      "my-applications": {
+        title: "My Applications",
+        subtitle: "Follow each application step and see updates as soon as they happen.",
+      },
+      "my-events": {
+        title: "My Events",
+        subtitle: "Keep your event schedule organized and never miss important milestones.",
+      },
+      "my-chat": {
+        title: "My Chats",
+        subtitle: "Chat with organizations quickly and keep every conversation in one place.",
+      },
+      "my-recommendations": {
+        title: "Recommended Events",
+        subtitle: "Discover personalized opportunities selected around your interests and activity.",
+      },
+      "student-profile": {
+        title: `${user?.displayName || "Student"}'s Profile`,
+        subtitle: "Keep your profile polished so opportunities can find you faster.",
+      },
+      "student-settings": {
+        title: "Settings",
+        subtitle: "Control your notifications, privacy, and engagement preferences with ease.",
+      },
       
       // Admin Routes
-      'admin-organizations': 'Organizations Management',
-      'admin-users': 'User Management',
-      'admin-analytics': 'Analytics Dashboard',
-      'admin-reports': 'Reports',
-      'admin-profile': `${user?.displayName || 'Admin'} Profile`,
-      'admin-settings': 'Admin Settings'
+      "admin-organizations": {
+        title: "Organizations Management",
+        subtitle: "Direct organizational governance, compliance, and quality at platform scale.",
+      },
+      "admin-users": {
+        title: "User Management",
+        subtitle: "Administer access policy, role architecture, and user lifecycle controls with precision.",
+      },
+      "admin-analytics": {
+        title: "Analytics Dashboard",
+        subtitle: "Review system health, risk signals, and strategic growth indicators across the platform.",
+      },
+      "admin-reports": {
+        title: "Reports",
+        subtitle: "Generate governance-grade reports for operational review and strategic planning.",
+      },
+      "admin-profile": {
+        title: `${user?.displayName || "Admin"} Profile`,
+        subtitle: "Manage administrator identity, security posture, and control preferences.",
+      },
+      "admin-settings": {
+        title: "Admin Settings",
+        subtitle: "Configure global platform policy, operational guardrails, and administrative defaults.",
+      },
     };
 
-    // Return the mapped name or fallback to the original logic
-    return pageNames[path] || path
-      .replace(/^(org-|my-|student-|admin-)/, '') // Remove all prefixes
+    if (pageMeta[path]) return pageMeta[path];
+
+    const fallbackTitle = path
+      .replace(/^(org-|my-|student-|admin-)/, "")
       .replace(/-/g, " ")
       .replace(/\b\w/g, (char) => char.toUpperCase());
+
+    return {
+      title: fallbackTitle || "Dashboard",
+      subtitle: "Operational workspace for focused execution and real-time visibility.",
+    };
   };
 
   const getUserDisplayName = () => {
@@ -411,6 +503,7 @@ const TopBar = ({ sidebarOpen, onSidebarToggle, userInfo, user }) => {
     return userInfo?.role || 'user';
   };
   const avatarUrl = user?.photoURL || userInfo?.photoURL || '/default-avatar.png';
+  const pageMeta = getPageMeta();
 
   return (
     <header className="sticky top-0 z-30 border-b border-white/70 bg-white/96 shadow-[0_8px_28px_rgba(15,23,42,0.04)] supports-[backdrop-filter]:bg-white/82 supports-[backdrop-filter]:backdrop-blur-2xl md:shadow-[0_14px_40px_rgba(15,23,42,0.08)]">
@@ -436,26 +529,41 @@ const TopBar = ({ sidebarOpen, onSidebarToggle, userInfo, user }) => {
           </button>
           <div>
             <h1 className="text-lg font-semibold tracking-tight text-slate-900 sm:text-xl">
-              {getPageName()}
+              {pageMeta.title}
             </h1>
-            <p className="hidden text-xs text-slate-500 sm:block">Dashboard control center</p>
+            <p className="hidden text-xs text-slate-500 sm:block">{pageMeta.subtitle}</p>
           </div>
         </div>
 
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           {/* Search */}
-          <div className="relative hidden md:block">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <button
-              onClick={() => setIsSearchOpen(true)}
-              className="flex w-72 items-center justify-between rounded-2xl border border-slate-200/80 bg-white/80 py-2.5 pl-10 pr-3 text-left text-sm text-slate-500 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-white"
-            >
-              <span>Search pages, events, applications...</span>
-              <span className="inline-flex items-center gap-1 text-xs text-slate-400">
-                <Command className="h-3 w-3" />
-                K
-              </span>
-            </button>
+          <div
+            className="relative hidden md:flex items-center gap-2"
+            onMouseEnter={() => setIsSearchRevealOpen(true)}
+            onMouseLeave={() => setIsSearchRevealOpen(false)}
+          >
+            {!isSearchRevealOpen ? (
+              <button
+                className="rounded-2xl border border-transparent p-2.5 text-slate-600 transition-all duration-200 hover:border-slate-200 hover:bg-white/80 hover:text-slate-900"
+                aria-label="Open search"
+              >
+                <Search className="h-5 w-5" />
+              </button>
+            ) : (
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <button
+                  onClick={() => setIsSearchOpen(true)}
+                  className="flex w-72 items-center justify-between rounded-2xl border border-slate-200/80 bg-white/85 py-2.5 pl-10 pr-3 text-left text-sm text-slate-500 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-white"
+                >
+                  <span>Search pages, events,</span>
+                  <span className="inline-flex items-center gap-1 text-xs text-slate-400">
+                    <Command className="h-3 w-3" />
+                    K
+                  </span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Notifications */}

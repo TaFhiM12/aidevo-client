@@ -114,13 +114,6 @@ const OrganizationAnalytics = () => {
 
     return (
         <div className="space-y-6">
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                <h1 className="text-2xl font-bold text-slate-900">Organization Analytics</h1>
-                <p className="text-slate-600 mt-1">
-                    Production-style operational insights for events, applicants, members, and revenue.
-                </p>
-            </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                 <Card label="Total Events" value={stats.totalEvents || 0} icon={Calendar} />
                 <Card label="Total Applications" value={stats.totalApplications || 0} icon={FileText} />

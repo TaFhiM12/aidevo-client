@@ -14,8 +14,6 @@ import {
   Pencil,
   Eye,
   Search,
-  Filter,
-  ChevronDown,
   X,
   Star,
   CheckCircle2,
@@ -87,7 +85,6 @@ const OrganizationEvents = () => {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("all");
-  const [showFilters, setShowFilters] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [statusUpdatingMap, setStatusUpdatingMap] = useState({});
@@ -408,6 +405,36 @@ const handleRemoveParticipant = async (participantId) => {
     return matchesSearch && matchesStatus;
   }), [events, searchTerm, selectedStatus]);
 
+  const statusToggleOptions = useMemo(
+    () => [
+      { value: "all", label: "All" },
+      { value: "active", label: "Active" },
+      { value: "completed", label: "Completed" },
+      { value: "cancelled", label: "Cancelled" },
+      { value: "draft", label: "Draft" },
+    ],
+    []
+  );
+
+  const statusCounts = useMemo(() => {
+    const counts = {
+      all: events.length,
+      active: 0,
+      completed: 0,
+      cancelled: 0,
+      draft: 0,
+    };
+
+    events.forEach((event) => {
+      const key = String(event.status || "").toLowerCase();
+      if (key in counts) {
+        counts[key] += 1;
+      }
+    });
+
+    return counts;
+  }, [events]);
+
   const {
     visibleItems: visibleEvents,
     hasMore,
@@ -462,10 +489,10 @@ const handleRemoveParticipant = async (participantId) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -5 }}
-      className="app-surface overflow-hidden group cursor-pointer transition-all duration-300 hover:shadow-md flex flex-col h-full min-h-[560px]"
+      className="app-surface overflow-hidden group cursor-pointer transition-all duration-300 hover:shadow-md flex flex-col h-full"
     >
-      {/* Event Image - Fixed Height */}
-      <div className="relative h-48 overflow-hidden flex-shrink-0">
+      {/* Event Header */}
+      <div className="relative h-36 overflow-hidden flex-shrink-0">
         {event.cover ? (
           <img
             src={event.cover}
@@ -486,9 +513,9 @@ const handleRemoveParticipant = async (participantId) => {
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
         {/* Status Badge */}
-        <div className="absolute top-4 left-4">
+        <div className="absolute top-3 left-3">
           <span
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold ${getStatusColor(event.status)}`}
+            className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${getStatusColor(event.status)}`}
           >
             {event.status}
           </span>
@@ -496,8 +523,8 @@ const handleRemoveParticipant = async (participantId) => {
 
         {/* Upcoming Badge */}
         {isUpcoming(event.startAt) && (
-          <div className="absolute top-4 right-4">
-            <span className="px-3 py-1.5 rounded-full text-xs font-semibold bg-green-500 text-white shadow-lg backdrop-blur-sm flex items-center gap-1">
+          <div className="absolute top-3 right-3">
+            <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-green-500 text-white shadow-lg backdrop-blur-sm flex items-center gap-1">
               <Star className="w-3 h-3" />
               Upcoming
             </span>
@@ -506,8 +533,8 @@ const handleRemoveParticipant = async (participantId) => {
 
         {/* Capacity */}
         {event.maxCapacity && (
-          <div className="absolute bottom-4 left-4">
-            <span className="px-3 py-1.5 rounded-full text-xs font-semibold bg-white/90 text-gray-700 backdrop-blur-sm flex items-center gap-1">
+          <div className="absolute bottom-3 left-3">
+            <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-white/90 text-gray-700 backdrop-blur-sm flex items-center gap-1">
               <Users className="w-3 h-3" />
               {event.maxCapacity} spots
             </span>
@@ -516,19 +543,19 @@ const handleRemoveParticipant = async (participantId) => {
       </div>
 
       {/* Event Content */}
-      <div className="p-6 flex flex-col flex-1">
+      <div className="p-4 flex flex-col flex-1">
         {/* Title and Description Section */}
-        <div className="flex-1 mb-4">
-          <h3 className="font-bold text-gray-900 text-xl leading-tight line-clamp-2 mb-3 group-hover:text-blue-500 transition-colors min-h-[56px]">
+        <div className="flex-1 mb-3">
+          <h3 className="font-bold text-gray-900 text-base leading-tight line-clamp-2 mb-2 group-hover:text-blue-500 transition-colors">
             {event.title}
           </h3>
-          <p className="text-gray-600 text-sm leading-relaxed line-clamp-3 min-h-[60px]">
+          <p className="text-gray-600 text-sm leading-relaxed line-clamp-2">
             {event.shortDesc}
           </p>
         </div>
 
         {/* Event Details */}
-        <div className="space-y-2 text-sm text-gray-500 mb-4 min-h-[76px]">
+        <div className="space-y-1.5 text-sm text-gray-500 mb-3">
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 flex-shrink-0" />
             <span className="truncate">{formatDate(event.startAt)}</span>
@@ -549,9 +576,9 @@ const handleRemoveParticipant = async (participantId) => {
 
         {/* Tags */}
         {event.tags && (
-          <div className="flex flex-wrap gap-1 mb-4 min-h-[36px] content-start">
+          <div className="flex flex-wrap gap-1 mb-3 content-start">
             {(Array.isArray(event.tags) ? event.tags : event.tags.split(","))
-              .slice(0, 3)
+              .slice(0, 2)
               .map((tag, index) => (
                 <span
                   key={index}
@@ -564,25 +591,25 @@ const handleRemoveParticipant = async (participantId) => {
         )}
 
         {/* Action Buttons */}
-        <div className="mt-auto pt-4 border-t border-gray-100 space-y-3">
+        <div className="mt-auto pt-3 border-t border-gray-100 space-y-2.5">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <button
               onClick={() => handleViewDetails(event)}
-              className="app-btn-primary text-sm px-4 py-2 w-full justify-center"
+              className="app-btn-primary text-sm px-3 py-2 w-full justify-center"
             >
               <Eye className="w-4 h-4" />
               Details
             </button>
             <button
               onClick={() => handleOpenEdit(event)}
-              className="app-btn-secondary text-sm px-4 py-2 w-full justify-center"
+              className="app-btn-secondary text-sm px-3 py-2 w-full justify-center"
             >
               <Pencil className="w-4 h-4" />
               Edit
             </button>
             <button
               onClick={() => handleViewParticipants(event)}
-              className="app-btn-secondary text-sm px-4 py-2 w-full justify-center"
+              className="app-btn-secondary text-sm px-3 py-2 w-full justify-center"
             >
               <Users className="w-4 h-4" />
               Participants
@@ -598,7 +625,7 @@ const handleRemoveParticipant = async (participantId) => {
                 value={event.status || "active"}
                 onChange={(e) => handleStatusUpdate(event._id, e.target.value)}
                 disabled={Boolean(statusUpdatingMap[event._id])}
-                className="h-10 w-full sm:w-44 px-3 border border-gray-200 rounded-xl bg-white text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="h-9 w-full sm:w-40 px-3 border border-gray-200 rounded-xl bg-white text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               >
                 <option value="active">Active</option>
                 <option value="completed">Completed</option>
@@ -610,7 +637,7 @@ const handleRemoveParticipant = async (participantId) => {
             <div className="flex items-center gap-2 justify-end">
               <button
                 onClick={() => handleDeleteEvent(event._id)}
-                className="h-10 w-10 inline-flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors duration-200 rounded-xl hover:bg-red-50 border border-transparent hover:border-red-100"
+                className="h-9 w-9 inline-flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors duration-200 rounded-xl hover:bg-red-50 border border-transparent hover:border-red-100"
                 aria-label="Delete event"
               >
                 <Trash2 className="w-4 h-4" />
@@ -676,67 +703,39 @@ const handleRemoveParticipant = async (participantId) => {
                 />
               </div>
             </div>
-
-            {/* Filter Toggle */}
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="app-btn-primary px-6 py-4"
-            >
-              <Filter className="w-5 h-5" />
-              Filters
-              <ChevronDown
-                className={`w-4 h-4 transition-transform ${
-                  showFilters ? "rotate-180" : ""
-                }`}
-              />
-            </button>
           </div>
 
-          {/* Advanced Filters */}
-          <AnimatePresence>
-            {showFilters && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="overflow-hidden"
-              >
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-200">
-                  {/* Status Filter */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Status
-                    </label>
-                    <select
-                      value={selectedStatus}
-                      onChange={(e) => setSelectedStatus(e.target.value)}
-                      className="w-full px-3 py-2 bg-gray-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all duration-300"
+          {/* Status Toggle */}
+          <div className="mb-4 rounded-2xl border border-slate-200 bg-white/70 p-2">
+            <div className="flex flex-wrap gap-2">
+              {statusToggleOptions.map((option) => {
+                const isActive = selectedStatus === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    onClick={() => setSelectedStatus(option.value)}
+                    className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 ${
+                      isActive
+                        ? "bg-gradient-to-r from-sky-500 to-blue-500 text-white shadow-sm"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    <span>{option.label}</span>
+                    <span
+                      className={`rounded-full px-1.5 py-0.5 text-xs ${
+                        isActive
+                          ? "bg-white/20 text-white"
+                          : "bg-white text-slate-600"
+                      }`}
                     >
-                      <option value="all">All Status</option>
-                      <option value="active">Active</option>
-                      <option value="completed">Completed</option>
-                      <option value="cancelled">Cancelled</option>
-                      <option value="draft">Draft</option>
-                    </select>
-                  </div>
+                      {statusCounts[option.value]}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-                  {/* Clear Filters */}
-                  <div className="flex items-end">
-                    <button
-                      onClick={() => {
-                        setSearchTerm("");
-                        setSelectedStatus("all");
-                      }}
-                      className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium flex items-center gap-2"
-                    >
-                      <X className="w-4 h-4" />
-                      Clear Filters
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </motion.div>
 
         {/* Events Grid */}
