@@ -190,7 +190,7 @@ const Navbar = () => {
   // console.log(userInfo)
 
   return (
-    <nav className="bg-white top-0 z-50 ">
+    <nav className="sticky top-0 z-50 border-b border-white/70 bg-white/96 md:bg-white/78 md:border-white/60 md:backdrop-blur-2xl supports-[backdrop-filter]:md:bg-white/70 shadow-[0_8px_30px_rgba(15,23,42,0.04)] md:shadow-[0_14px_40px_rgba(15,23,42,0.08)]">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo and mobile menu button */}
