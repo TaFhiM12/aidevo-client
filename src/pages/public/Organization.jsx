@@ -452,6 +452,44 @@ const Organization = () => {
       .filter(Boolean)
   ).size;
 
+  const typeCounts = useMemo(() => {
+    const counts = { all: organizations.length };
+    organizations.forEach((org) => {
+      const key = String(org?.organization?.type || '').trim();
+      if (!key) return;
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    return counts;
+  }, [organizations]);
+
+  const campusCounts = useMemo(() => {
+    const counts = { all: organizations.length };
+    organizations.forEach((org) => {
+      const key = String(org?.organization?.campus || '').trim();
+      if (!key) return;
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    return counts;
+  }, [organizations]);
+
+  const quickTypeOptions = useMemo(() => {
+    const dynamic = Object.entries(typeCounts)
+      .filter(([key]) => key !== 'all')
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([key]) => key);
+    return ['all', ...dynamic];
+  }, [typeCounts]);
+
+  const quickCampusOptions = useMemo(() => {
+    const dynamic = Object.entries(campusCounts)
+      .filter(([key]) => key !== 'all')
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([key]) => key);
+    return ['all', ...dynamic];
+  }, [campusCounts]);
+
   return (
     <div className="min-h-screen  py-8 px-4 mt-14">
       <div className="max-w-7xl mx-auto">
@@ -550,7 +588,7 @@ const Organization = () => {
         )}
 
         {/* Search and Filters */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-8">
+        <div className="app-surface p-6 mb-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Search */}
             <div className="relative">
@@ -609,6 +647,70 @@ const Organization = () => {
                   </option>
                 ))}
               </select>
+            </div>
+          </div>
+
+          <div className="space-y-3 mt-4">
+            <div className="rounded-2xl border border-slate-200 bg-white/70 p-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {quickTypeOptions.map((type) => {
+                  const isActive = selectedType === type;
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setSelectedType(type)}
+                      className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 ${
+                        isActive
+                          ? 'bg-gradient-to-r from-sky-500 to-blue-500 text-white shadow-sm'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      <span>{type === 'all' ? 'All Types' : type}</span>
+                      <span
+                        className={`rounded-full px-1.5 py-0.5 text-xs ${
+                          isActive
+                            ? 'bg-white/20 text-white'
+                            : 'bg-white text-slate-600'
+                        }`}
+                      >
+                        {typeCounts[type] || 0}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white/70 p-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {quickCampusOptions.map((campus) => {
+                  const isActive = selectedCampus === campus;
+                  return (
+                    <button
+                      key={campus}
+                      type="button"
+                      onClick={() => setSelectedCampus(campus)}
+                      className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 ${
+                        isActive
+                          ? 'bg-gradient-to-r from-sky-500 to-blue-500 text-white shadow-sm'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      <span>{campus === 'all' ? 'All Campuses' : campus}</span>
+                      <span
+                        className={`rounded-full px-1.5 py-0.5 text-xs ${
+                          isActive
+                            ? 'bg-white/20 text-white'
+                            : 'bg-white text-slate-600'
+                        }`}
+                      >
+                        {campusCounts[campus] || 0}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
@@ -674,7 +776,7 @@ const Organization = () => {
                         className="w-16 h-16 rounded-xl object-cover flex-shrink-0"
                       />
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-gray-900 text-lg truncate">
+                        <h3 className="text-xl font-semibold text-slate-900 truncate">
                           {organization.organization?.name}
                         </h3>
                         <div className="flex items-center gap-2 mt-1">
@@ -770,7 +872,7 @@ const Organization = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <Link
                         to={`/organizations/${organization._id}`}
-                        className="app-btn-secondary w-full justify-center"
+                        className="app-btn-secondary w-full justify-center text-sm font-semibold tracking-tight"
                       >
                         <Building2 className="w-5 h-5" />
                         Details
@@ -780,7 +882,7 @@ const Organization = () => {
                         <button
                           onClick={() => !buttonConfig.disabled && handleApply(organization)}
                           disabled={buttonConfig.disabled}
-                          className={`w-full ${buttonConfig.buttonClass}`}
+                          className={`w-full ${buttonConfig.buttonClass} text-sm font-semibold tracking-tight`}
                         >
                           <ButtonIcon className="w-5 h-5" />
                           {buttonConfig.text}
@@ -829,7 +931,7 @@ const Organization = () => {
         {filteredOrganizations.length === 0 && !loading && (
           <div className="text-center py-12">
             <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <h3 className="text-xl font-semibold text-slate-900 mb-2">
               {organizations.length === 0 ? 'No organizations available' : 'No organizations found'}
             </h3>
             <p className="text-gray-500">

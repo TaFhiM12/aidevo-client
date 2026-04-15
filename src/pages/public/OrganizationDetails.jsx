@@ -247,7 +247,7 @@ const OrganizationDetails = () => {
 
                   <div className="flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h1 className="text-2xl font-bold text-slate-900">
+                      <h1 className="text-3xl md:text-4xl font-bold text-slate-900">
                         {organizationInfo.name || organization.name}
                       </h1>
                       {organizationInfo.verified && (

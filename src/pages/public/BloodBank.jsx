@@ -487,7 +487,7 @@ const BloodBank = () => {
                 <HeartPulse className="w-6 h-6" />
               </div>
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Aidevo Blood Bank Network</h1>
+                <h1 className="text-3xl md:text-4xl font-bold text-slate-900">Aidevo Blood Bank Network</h1>
                 <p className="text-slate-600 mt-2 max-w-3xl">
                   Emergency-first blood request board, verified donor discovery, map-based location support, and admin moderation in one place.
                 </p>

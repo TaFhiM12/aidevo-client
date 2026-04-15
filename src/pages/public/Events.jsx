@@ -82,6 +82,29 @@ const Events = () => {
     staleTime: 1000 * 60 * 3,
   });
 
+  const upcomingEventsCount = useMemo(
+    () => events.filter((event) => new Date(event?.startAt).getTime() > Date.now()).length,
+    [events]
+  );
+  const activeCategoryCount = useMemo(
+    () =>
+      new Set(
+        events
+          .map((event) => String(event.category || "").trim())
+          .filter(Boolean)
+      ).size,
+    [events]
+  );
+  const activeOrganizationCount = useMemo(
+    () =>
+      new Set(
+        events
+          .map((event) => String(event.organization || "").trim())
+          .filter(Boolean)
+      ).size,
+    [events]
+  );
+
   // Get unique values for filters
   const categories = useMemo(
     () => [
@@ -116,6 +139,44 @@ const Events = () => {
     ],
     [events]
   );
+
+  const categoryCounts = useMemo(() => {
+    const counts = { all: events.length };
+    events.forEach((event) => {
+      const key = String(event.category || "").trim();
+      if (!key) return;
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    return counts;
+  }, [events]);
+
+  const typeCounts = useMemo(() => {
+    const counts = { all: events.length };
+    events.forEach((event) => {
+      const key = String(event.type || "").trim();
+      if (!key) return;
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    return counts;
+  }, [events]);
+
+  const quickCategoryOptions = useMemo(() => {
+    const dynamic = Object.entries(categoryCounts)
+      .filter(([key]) => key !== "all")
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([key]) => key);
+    return ["all", ...dynamic];
+  }, [categoryCounts]);
+
+  const quickTypeOptions = useMemo(() => {
+    const dynamic = Object.entries(typeCounts)
+      .filter(([key]) => key !== "all")
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 4)
+      .map(([key]) => key);
+    return ["all", ...dynamic];
+  }, [typeCounts]);
 
   // Filter events
   const filteredEvents = events.filter((event) => {
@@ -335,7 +396,7 @@ const Events = () => {
       {/* Event Content */}
       <div className="p-6 flex flex-col flex-1">
         <div className="mb-3 flex-1">
-          <h3 className="font-bold text-gray-900 text-xl leading-tight line-clamp-2 mb-2 min-h-[56px] group-hover:text-[#4bbeff] transition-colors">
+          <h3 className="text-xl font-semibold text-slate-900 leading-tight line-clamp-2 mb-2 min-h-[56px] group-hover:text-[#4bbeff] transition-colors">
             {event.title}
           </h3>
           <p className="text-gray-600 text-sm leading-relaxed line-clamp-2 min-h-[44px]">
@@ -400,7 +461,7 @@ const Events = () => {
 
           <Link
             to={`/events/${event._id}`}
-            className="app-btn-primary text-sm px-4 py-2"
+            className="app-btn-primary text-sm font-semibold tracking-tight px-4 py-2"
           >
             View Details
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -417,19 +478,36 @@ const Events = () => {
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
+          className="app-surface p-6 md:p-8 mb-8"
         >
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            Discover Amazing
-            <span className="bg-gradient-to-r from-[#4bbeff] to-blue-500 bg-clip-text text-transparent">
-              {" "}
-              Events
-            </span>
-          </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Explore upcoming events, workshops, and activities across our
-            university community
-          </p>
+          <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-sky-700 uppercase tracking-wide mb-2">
+                Event Directory
+              </p>
+              <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-3">
+                Discover high-impact campus events and opportunities
+              </h1>
+              <p className="text-slate-600 text-base md:text-lg max-w-3xl">
+                Explore upcoming events, workshops, and activities curated across organizations and communities.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 md:gap-3 min-w-[280px]">
+              <div className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-center">
+                <p className="text-lg font-bold text-slate-900">{upcomingEventsCount}</p>
+                <p className="text-xs text-slate-600">Upcoming</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-center">
+                <p className="text-lg font-bold text-slate-900">{activeCategoryCount}</p>
+                <p className="text-xs text-slate-600">Categories</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-center">
+                <p className="text-lg font-bold text-slate-900">{activeOrganizationCount}</p>
+                <p className="text-xs text-slate-600">Organizations</p>
+              </div>
+            </div>
+          </div>
         </motion.div>
 
         {loading ? (
@@ -494,7 +572,7 @@ const Events = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100 p-6 mb-8"
+          className="app-surface p-6 mb-8"
         >
           <div className="flex flex-col lg:flex-row gap-4 mb-4">
             {/* Search Bar */}
@@ -514,7 +592,7 @@ const Events = () => {
             {/* Filter Toggle */}
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="px-6 py-4 bg-gradient-to-r from-[#4bbeff] to-blue-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all duration-200 flex items-center gap-2"
+              className="app-btn-primary text-sm md:text-base font-semibold tracking-tight px-6 py-4"
             >
               <Filter className="w-5 h-5" />
               Filters
@@ -524,6 +602,75 @@ const Events = () => {
                 }`}
               />
             </button>
+          </div>
+
+          <div className="space-y-3 mb-4">
+            <div className="rounded-2xl border border-slate-200 bg-white/70 p-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {quickCategoryOptions.map((category) => {
+                  const isActive = selectedCategory === category;
+                  return (
+                    <button
+                      key={category}
+                      type="button"
+                      onClick={() => setSelectedCategory(category)}
+                      className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 ${
+                        isActive
+                          ? "bg-gradient-to-r from-sky-500 to-blue-500 text-white shadow-sm"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      }`}
+                    >
+                      <span>
+                        {formatOptionLabel(category, "All Categories", {
+                          from: /-/g,
+                          to: " ",
+                        })}
+                      </span>
+                      <span
+                        className={`rounded-full px-1.5 py-0.5 text-xs ${
+                          isActive
+                            ? "bg-white/20 text-white"
+                            : "bg-white text-slate-600"
+                        }`}
+                      >
+                        {categoryCounts[category] || 0}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white/70 p-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {quickTypeOptions.map((type) => {
+                  const isActive = selectedType === type;
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setSelectedType(type)}
+                      className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 ${
+                        isActive
+                          ? "bg-gradient-to-r from-sky-500 to-blue-500 text-white shadow-sm"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      }`}
+                    >
+                      <span>{formatOptionLabel(type, "All Types")}</span>
+                      <span
+                        className={`rounded-full px-1.5 py-0.5 text-xs ${
+                          isActive
+                            ? "bg-white/20 text-white"
+                            : "bg-white text-slate-600"
+                        }`}
+                      >
+                        {typeCounts[type] || 0}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
           {/* Active Filters Info */}
@@ -698,7 +845,7 @@ const Events = () => {
               </p>
               <button
                 onClick={clearFilters}
-                className="mt-4 px-6 py-2 bg-[#4bbeff] text-white rounded-lg font-semibold hover:bg-blue-500 transition-colors"
+                className="mt-4 px-6 py-2 bg-[#4bbeff] text-white text-sm md:text-base font-semibold tracking-tight rounded-lg hover:bg-blue-500 transition-colors"
               >
                 Clear All Filters
               </button>

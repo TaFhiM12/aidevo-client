@@ -20,13 +20,13 @@ const About = () => {
                         <Sparkles className="w-4 h-4 text-blue-500" />
                         <span className="text-sm font-medium text-gray-700">About Aidevo</span>
                     </div>
-                    <h1 className="text-5xl sm:text-6xl font-bold text-gray-900 mb-6">
+                    <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-6">
                         Empowering Campus
                         <span className="block mt-2 bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent">
                             Communities
                         </span>
                     </h1>
-                    <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+                    <p className="text-lg text-slate-600 max-w-3xl mx-auto leading-relaxed">
                         Aidevo is the all-in-one platform designed to revolutionize how student organizations connect, collaborate, and thrive on campus.
                     </p>
                 </div>
@@ -56,7 +56,7 @@ const About = () => {
             <section className="py-20 bg-gradient-to-br from-slate-50 to-blue-50">
                 <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-16">
-                        <h2 className="text-4xl font-bold text-gray-900 mb-4">What is Aidevo?</h2>
+                        <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-4">What is Aidevo?</h2>
                         <p className="text-lg text-gray-600 max-w-3xl mx-auto">
                             Aidevo is a comprehensive web platform built specifically for university organizations, clubs, and societies to manage their operations seamlessly.
                         </p>
@@ -89,7 +89,7 @@ const About = () => {
             <section className="py-20 bg-white">
                 <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-16">
-                        <h2 className="text-4xl font-bold text-gray-900 mb-4">Platform Features</h2>
+                        <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-4">Platform Features</h2>
                         <p className="text-lg text-gray-600">
                             Everything you need to run a successful student organization
                         </p>
@@ -113,7 +113,7 @@ const About = () => {
             <section className="py-20 bg-gradient-to-br from-blue-50 to-cyan-50">
                 <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-16">
-                        <h2 className="text-4xl font-bold text-gray-900 mb-4">How It Works</h2>
+                        <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-4">How It Works</h2>
                         <p className="text-lg text-gray-600">
                             Get started in three simple steps
                         </p>
@@ -143,7 +143,7 @@ const About = () => {
             <section className="py-20 bg-white">
                 <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-16">
-                        <h2 className="text-4xl font-bold text-gray-900 mb-4">Who We Serve</h2>
+                        <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-4">Who We Serve</h2>
                         <p className="text-lg text-gray-600">
                             Built for diverse campus communities
                         </p>
@@ -178,7 +178,7 @@ const About = () => {
             <section className="py-20 bg-gradient-to-br from-slate-50 to-cyan-50">
                 <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-16">
-                        <h2 className="text-4xl font-bold text-gray-900 mb-4">Why Choose Aidevo?</h2>
+                        <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-4">Why Choose Aidevo?</h2>
                         <p className="text-lg text-gray-600">
                             What makes us different
                         </p>
@@ -213,7 +213,7 @@ const About = () => {
             <section className="py-20 bg-white">
                 <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-16">
-                        <h2 className="text-4xl font-bold text-gray-900 mb-4">Built with Modern Technology</h2>
+                        <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-4">Built with Modern Technology</h2>
                         <p className="text-lg text-gray-600">
                             Powered by cutting-edge web technologies for speed, security, and reliability
                         </p>
@@ -222,7 +222,7 @@ const About = () => {
                     <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-3xl p-8 md:p-12">
                         <div className="grid md:grid-cols-2 gap-12">
                             <div>
-                                <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+                                <h3 className="text-xl font-semibold text-slate-900 mb-6 flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white">
                                         <Code className="w-5 h-5" />
                                     </div>
@@ -236,7 +236,7 @@ const About = () => {
                                 </ul>
                             </div>
                             <div>
-                                <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+                                <h3 className="text-xl font-semibold text-slate-900 mb-6 flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center text-white">
                                         <Shield className="w-5 h-5" />
                                     </div>
@@ -257,17 +257,17 @@ const About = () => {
             {/* CTA Section */}
             <section className="py-20 bg-gradient-to-r from-blue-500 to-cyan-500">
                 <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                    <h2 className="text-4xl font-bold text-white mb-6">
+                    <h2 className="text-2xl md:text-3xl font-bold text-white mb-6">
                         Ready to Transform Your Organization?
                     </h2>
                     <p className="text-xl text-blue-50 mb-8">
                         Join hundreds of student organizations already using Aidevo to build stronger communities.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                        <button className="px-8 py-4 bg-white text-blue-600 font-semibold rounded-2xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200">
+                        <button className="px-8 py-4 bg-white text-blue-600 text-sm md:text-base font-semibold tracking-tight rounded-2xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200">
                             Get Started Free
                         </button>
-                        <button className="px-8 py-4 bg-transparent border-2 border-white text-white font-semibold rounded-2xl hover:bg-white hover:text-blue-600 transition-all duration-200">
+                        <button className="px-8 py-4 bg-transparent border-2 border-white text-white text-sm md:text-base font-semibold tracking-tight rounded-2xl hover:bg-white hover:text-blue-600 transition-all duration-200">
                             Contact Us
                         </button>
                     </div>
@@ -284,8 +284,8 @@ const MissionCard = ({ icon, title, description, gradient }) => (
         <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center text-white mb-6`}>
             {icon}
         </div>
-        <h3 className="text-2xl font-bold text-gray-900 mb-4">{title}</h3>
-        <p className="text-gray-600 leading-relaxed">{description}</p>
+        <h3 className="text-xl font-semibold text-slate-900 mb-4">{title}</h3>
+        <p className="text-slate-600 leading-relaxed">{description}</p>
     </div>
 );
 
@@ -299,8 +299,8 @@ const InfoCard = ({ icon, title, description, color }) => {
             <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${colorClasses} flex items-center justify-center text-white mb-4`}>
                 {icon}
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-3">{title}</h3>
-            <p className="text-gray-600 leading-relaxed">{description}</p>
+            <h3 className="text-xl font-semibold text-slate-900 mb-3">{title}</h3>
+            <p className="text-slate-600 leading-relaxed">{description}</p>
         </div>
     );
 };
@@ -320,8 +320,8 @@ const StepCard = ({ number, title, description }) => (
             {number}
         </div>
         <div className="mt-4">
-            <h3 className="text-2xl font-bold text-gray-900 mb-3">{title}</h3>
-            <p className="text-gray-600 leading-relaxed">{description}</p>
+            <h3 className="text-xl font-semibold text-slate-900 mb-3">{title}</h3>
+            <p className="text-slate-600 leading-relaxed">{description}</p>
         </div>
     </div>
 );
@@ -331,7 +331,7 @@ const AudienceCard = ({ icon, title, items }) => (
         <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white mb-4">
             {icon}
         </div>
-        <h3 className="text-xl font-bold text-gray-900 mb-4">{title}</h3>
+        <h3 className="text-xl font-semibold text-slate-900 mb-4">{title}</h3>
         <ul className="space-y-2">
             {items.map((item, index) => (
                 <li key={index} className="flex items-center gap-2 text-gray-600">
@@ -348,8 +348,8 @@ const WhyCard = ({ icon, title, description }) => (
         <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white mb-4">
             {icon}
         </div>
-        <h3 className="text-xl font-bold text-gray-900 mb-3">{title}</h3>
-        <p className="text-gray-600 leading-relaxed">{description}</p>
+        <h3 className="text-xl font-semibold text-slate-900 mb-3">{title}</h3>
+        <p className="text-slate-600 leading-relaxed">{description}</p>
     </div>
 );
 

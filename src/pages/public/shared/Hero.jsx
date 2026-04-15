@@ -81,23 +81,23 @@ const Hero = () => {
 
                 {/* Hero Headline */}
                 <div className="text-center max-w-4xl mx-auto mb-12 animate-slide-up">
-                    <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-6 leading-tight">
+                    <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-6 leading-tight">
                         Campus Organizations,
                         <span className="block mt-2 bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent">
                             One Reliable Workspace
                         </span>
                     </h1>
-                    <p className="text-lg sm:text-xl text-gray-600 mb-8 leading-relaxed max-w-2xl mx-auto">
+                    <p className="text-lg text-slate-600 mb-8 leading-relaxed max-w-2xl mx-auto">
                         Browse active organizations, review their focus areas, and apply to the groups that match your academic and extracurricular goals.
                     </p>
 
                     {/* CTA Buttons */}
                     <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                        <Link to="/organization" className="group px-8 py-4 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold rounded-2xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2 cursor-pointer">
+                        <Link to="/organization" className="group px-8 py-4 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white text-sm md:text-base font-semibold tracking-tight rounded-2xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2 cursor-pointer">
                             Browse Organizations
                             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                         </Link>
-                        <Link to="/events" className="px-8 py-4 bg-white hover:bg-gray-50 text-gray-700 font-semibold rounded-2xl shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 border border-gray-200">
+                        <Link to="/events" className="px-8 py-4 bg-white hover:bg-gray-50 text-slate-700 text-sm md:text-base font-semibold tracking-tight rounded-2xl shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 border border-gray-200">
                             Explore Events
                         </Link>
                     </div>
@@ -204,8 +204,8 @@ const FeatureCard = ({ icon, title, description, color }) => {
             <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${colorClasses} flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform duration-300`}>
                 {icon}
             </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">{title}</h3>
-            <p className="text-gray-600 text-sm leading-relaxed">{description}</p>
+            <h3 className="text-xl font-semibold text-slate-900 mb-2">{title}</h3>
+            <p className="text-slate-600 text-sm leading-relaxed">{description}</p>
         </div>
     );
 };
