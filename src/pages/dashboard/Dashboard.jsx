@@ -9,6 +9,7 @@ import { NotificationProvider } from "../../context/NotificationContext";
 
 const CombinedDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const { user, loading: authLoading, logOut } = useAuth();
   const navigate = useNavigate();
   const { userInfo, loading: roleLoading, error, refetch } = useUserRole();
@@ -56,11 +57,34 @@ const CombinedDashboard = () => {
     return null;
   }
 
+  const handleSidebarToggle = () => {
+    if (typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches) {
+      setMobileSidebarOpen((prev) => !prev);
+      return;
+    }
+
+    setSidebarOpen((prev) => !prev);
+  };
+
+  const handleMobileSidebarClose = () => {
+    setMobileSidebarOpen(false);
+  };
+
   return (
     <NotificationProvider>
-    <div className="flex h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50">
+      {mobileSidebarOpen && (
+        <button
+          type="button"
+          aria-label="Close sidebar backdrop"
+          onClick={handleMobileSidebarClose}
+          className="fixed inset-0 z-30 bg-slate-950/35 backdrop-blur-[1px] lg:hidden"
+        />
+      )}
       <SideBar 
         sidebarOpen={sidebarOpen} 
+        mobileSidebarOpen={mobileSidebarOpen}
+        onMobileNavigate={handleMobileSidebarClose}
         userInfo={shellUserInfo} 
         user={user}
         logOut={logOut}
@@ -68,18 +92,18 @@ const CombinedDashboard = () => {
       
       {/* Main content area with dynamic margin based on sidebar width */}
       <div 
-        className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${
-          sidebarOpen ? "ml-64" : "ml-20"
+        className={`flex min-h-screen flex-col overflow-hidden transition-all duration-300 ${
+          sidebarOpen ? "lg:pl-64" : "lg:pl-20"
         }`}
       >
         <TopBar 
           sidebarOpen={sidebarOpen}
-          setSidebarOpen={setSidebarOpen}
+          onSidebarToggle={handleSidebarToggle}
           userInfo={shellUserInfo}
           user={user}
         />
         
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6">
           {roleLoading ? (
             <div className="space-y-4">
               <div className="app-surface p-6 animate-pulse">

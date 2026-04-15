@@ -55,7 +55,7 @@ const StudentSettings = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="mx-auto space-y-6">
       <div className="app-surface p-6">
         <h1 className="text-2xl font-bold text-slate-900">Student Settings</h1>
         <p className="text-slate-600 mt-1">

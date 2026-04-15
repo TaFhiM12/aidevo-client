@@ -4,7 +4,7 @@ import { Bell, Search, Command, Loader2 } from "lucide-react";
 import { useNotifications } from "../../../context/NotificationContext";
 import useDashboardOverview from "../../../hooks/useDashboardOverview";
 
-const TopBar = ({ sidebarOpen, setSidebarOpen, userInfo, user }) => {
+const TopBar = ({ sidebarOpen, onSidebarToggle, userInfo, user }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [openNotifications, setOpenNotifications] = useState(false);
@@ -417,7 +417,7 @@ const TopBar = ({ sidebarOpen, setSidebarOpen, userInfo, user }) => {
       <div className="flex items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-3 sm:gap-4">
           <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
+            onClick={onSidebarToggle}
             className="rounded-2xl border border-transparent p-2.5 text-slate-600 transition-all duration-200 hover:border-slate-200 hover:bg-white/80 hover:text-slate-900"
           >
             <svg
@@ -442,7 +442,7 @@ const TopBar = ({ sidebarOpen, setSidebarOpen, userInfo, user }) => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           {/* Search */}
           <div className="relative hidden md:block">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />

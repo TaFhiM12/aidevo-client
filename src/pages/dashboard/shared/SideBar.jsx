@@ -19,7 +19,7 @@ import {
 import Logo from "../../../components/common/Logo";
 import toast from "react-hot-toast";
 
-const SideBar = ({ sidebarOpen, userInfo, user, logOut }) => {
+const SideBar = ({ sidebarOpen, mobileSidebarOpen, onMobileNavigate, userInfo, user, logOut }) => {
   const role = userInfo?.role || "user";
 
   const getNavItems = () => {
@@ -97,9 +97,9 @@ const SideBar = ({ sidebarOpen, userInfo, user, logOut }) => {
 
   return (
     <aside
-      className={`fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-white/70 bg-white/96 shadow-[0_12px_36px_rgba(15,23,42,0.08)] transition-all duration-300 supports-[backdrop-filter]:bg-white/82 supports-[backdrop-filter]:backdrop-blur-2xl md:shadow-[0_18px_48px_rgba(15,23,42,0.1)] ${
-        sidebarOpen ? "w-64" : "w-20"
-      }`}
+      className={`fixed left-0 top-0 z-40 flex h-screen w-64 -translate-x-full flex-col border-r border-white/70 bg-white/96 shadow-[0_12px_36px_rgba(15,23,42,0.08)] transition-all duration-300 supports-[backdrop-filter]:bg-white/82 supports-[backdrop-filter]:backdrop-blur-2xl lg:translate-x-0 lg:shadow-[0_18px_48px_rgba(15,23,42,0.1)] ${
+        mobileSidebarOpen ? "translate-x-0" : ""
+      } ${sidebarOpen ? "lg:w-64" : "lg:w-20"}`}
     >
       <div className="flex-shrink-0 border-b border-slate-200/70 px-4 py-4">
         {sidebarOpen ? (
@@ -126,6 +126,7 @@ const SideBar = ({ sidebarOpen, userInfo, user, logOut }) => {
               key={item.name}
               to={item.path}
               end={item.path === "/dashboard"}
+              onClick={onMobileNavigate}
               className={({ isActive }) =>
                 `group flex w-full cursor-pointer items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition-all duration-200 ${
                   isActive
@@ -144,6 +145,7 @@ const SideBar = ({ sidebarOpen, userInfo, user, logOut }) => {
       <div className="flex-shrink-0 border-t border-slate-200/70 p-4">
         <button
           onClick={handleSignOut}
+          onMouseDown={onMobileNavigate}
           className={`flex w-full cursor-pointer items-center gap-3 rounded-2xl border border-transparent px-3 py-3 text-sm text-slate-600 transition-all duration-200 hover:border-slate-200 hover:bg-white/80 hover:text-slate-900 ${
             !sidebarOpen && "justify-center"
           }`}
