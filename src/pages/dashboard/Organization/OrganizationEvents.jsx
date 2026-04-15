@@ -651,7 +651,7 @@ const handleRemoveParticipant = async (participantId) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 px-4 pb-24">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 px-3 py-2 pb-24">
       <div className="max-w-7xl mx-auto">
         {/* Header Section */}
 

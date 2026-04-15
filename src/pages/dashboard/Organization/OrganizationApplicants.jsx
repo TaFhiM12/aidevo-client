@@ -228,7 +228,7 @@ const OrganizationApplicants = ({ embedded = false, showStats = !embedded }) => 
   }
 
   return (
-    <div className={embedded ? "" : "min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 py-8 px-4"}>
+    <div className={embedded ? "" : "min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 py-4 px-3"}>
       <div className={embedded ? "space-y-6" : "max-w-7xl mx-auto"}>
         {/* Header */}
         {!embedded && (

@@ -78,7 +78,7 @@ const OrganizationSettings = () => {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <div className="app-surface p-6">
+      <div className="app-surface p-4">
         <h1 className="text-2xl font-bold text-slate-900">Organization Settings</h1>
         <p className="text-slate-600 mt-1">
           Configure operations, governance, and communication preferences in one place.
@@ -86,7 +86,7 @@ const OrganizationSettings = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <div className="app-surface p-6 space-y-4">
+        <div className="app-surface p-4 space-y-4">
           <div className="flex items-center gap-2">
             <Building2 className="w-5 h-5 text-sky-600" />
             <h2 className="text-lg font-semibold text-slate-900">Operations</h2>
@@ -113,7 +113,7 @@ const OrganizationSettings = () => {
           </select>
         </div>
 
-        <div className="app-surface p-6 space-y-4">
+        <div className="app-surface p-4 space-y-4">
           <div className="flex items-center gap-2">
             <BellRing className="w-5 h-5 text-amber-600" />
             <h2 className="text-lg font-semibold text-slate-900">Alerts</h2>
@@ -138,7 +138,7 @@ const OrganizationSettings = () => {
           </label>
         </div>
 
-        <div className="app-surface p-6 space-y-4">
+        <div className="app-surface p-4 space-y-4">
           <div className="flex items-center gap-2">
             <UserPlus className="w-5 h-5 text-emerald-600" />
             <h2 className="text-lg font-semibold text-slate-900">Recruitment</h2>
@@ -186,7 +186,7 @@ const OrganizationSettings = () => {
         </div>
       </div>
 
-      <div className="app-surface p-5 flex items-center justify-between">
+      <div className="app-surface p-4 flex items-center justify-between">
         <div className="inline-flex items-center gap-2">
           <Shield className="w-5 h-5 text-sky-600" />
           <span className="font-medium text-slate-800">Operational controls are configured for consistent execution.</span>

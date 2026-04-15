@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "framer-motion";
+import { useSearchParams } from "react-router";
 import {
   User,
   Mail,
@@ -37,7 +39,11 @@ import {
   Linkedin,
   Github,
   Globe,
+  Briefcase,
+  Zap,
+  Trophy,
 } from "lucide-react";
+// eslint-disable-next-line no-unused-vars
 import axios from "axios";
 import toast from "react-hot-toast";
 import { uploadToCloudinary } from "../../../utils/uploadToCloudinary";
@@ -347,7 +353,6 @@ const ArrayManagement = ({
 
 const MyProfile = () => {
   const [isEditing, setIsEditing] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [savingField, setSavingField] = useState(null);
@@ -1417,16 +1422,32 @@ const MyProfile = () => {
     </motion.div>
   );
 
-  // Main Content Component - UPDATED LAYOUT
+  // Main Content Component - COMPACT TOGGLE DESIGN
   const StudentContent = () => {
-    const tabs = [
-      { id: "overview", label: "Overview" },
-      { id: "academic", label: "Academic" },
-      { id: "projects", label: "Projects" },
-      { id: "skills", label: "Skills" },
-      { id: "achievements", label: "Achievements" },
-      { id: "career", label: "Career" },
-    ];
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    const tabs = useMemo(
+      () => [
+        { id: "overview", label: "Overview", icon: User },
+        { id: "academic", label: "Academic", icon: GraduationCap },
+        { id: "contact", label: "Contact", icon: Mail },
+        { id: "social", label: "Social", icon: Globe },
+        { id: "projects", label: "Projects", icon: Briefcase },
+        { id: "skills", label: "Skills", icon: Zap },
+        { id: "achievements", label: "Achievements", icon: Trophy },
+        { id: "career", label: "Career", icon: Target },
+      ],
+      []
+    );
+
+    const activeTab = useMemo(() => {
+      const tab = searchParams.get("tab");
+      return tabs.find((t) => t.id === tab)?.id || "overview";
+    }, [searchParams, tabs]);
+
+    const handleTabChange = (tabId) => {
+      setSearchParams({ tab: tabId }, { replace: true });
+    };
 
     const renderTabContent = () => {
       switch (activeTab) {
@@ -1453,6 +1474,10 @@ const MyProfile = () => {
           return <SkillsSection />;
         case "achievements":
           return <AchievementsSection />;
+        case "contact":
+          return <ContactInfo />;
+        case "social":
+          return <SocialLinks />;
         case "career":
           return <CareerGoalsSection />;
         default:
@@ -1461,56 +1486,43 @@ const MyProfile = () => {
     };
 
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
-        {/* Sidebar - WIDER VERSION */}
-        <div className="lg:col-span-4 xl:col-span-3 space-y-6 lg:space-y-8">
-          <ContactInfo />
-          <SocialLinks />
+      <div className="space-y-6">
+        {/* Sticky Tab Bar */}
+        <div className="sticky top-20 z-20 flex gap-2 overflow-x-auto rounded-2xl border border-slate-200/70 bg-white/96 p-1 backdrop-blur-2xl sm:gap-3 sm:p-1.5">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+
+            return (
+              <button
+                key={tab.id}
+                onClick={() => handleTabChange(tab.id)}
+                className={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 sm:px-4 sm:py-3 ${
+                  isActive
+                    ? "border border-sky-200/80 bg-gradient-to-r from-sky-50 to-blue-50 text-sky-800 shadow-sm shadow-sky-100/70"
+                    : "border border-transparent text-slate-600 hover:border-slate-200 hover:bg-white/80 hover:text-slate-900"
+                }`}
+              >
+                <Icon className="h-4 w-4 flex-shrink-0" />
+                <span className="hidden sm:inline">{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
 
-        {/* Main Content */}
-        <div className="lg:col-span-8 xl:col-span-9">
+        {/* Full-Width Tab Content */}
+        <AnimatePresence mode="sync">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            key={activeTab}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden"
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+            className="app-surface p-4"
           >
-            {/* Tab Navigation */}
-            <div className="border-b border-gray-200 bg-gray-50/50">
-              <nav className="flex space-x-1 px-3 sm:px-4 lg:px-6 overflow-x-auto snap-x snap-mandatory">
-                {tabs.map(({ id, label }) => (
-                  <button
-                    key={id}
-                    onClick={() => setActiveTab(id)}
-                    className={`snap-start py-4 px-3 sm:px-4 border-b-2 font-semibold text-sm sm:text-base capitalize transition-all whitespace-nowrap min-w-max ${
-                      activeTab === id
-                        ? "border-blue-500 text-blue-600 bg-white shadow-sm"
-                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </nav>
-            </div>
-
-            {/* Tab Content */}
-            <div className="p-4 sm:p-6 lg:p-8">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activeTab}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  {renderTabContent()}
-                </motion.div>
-              </AnimatePresence>
-            </div>
+            {renderTabContent()}
           </motion.div>
-        </div>
+        </AnimatePresence>
       </div>
     );
   };
@@ -1530,8 +1542,8 @@ const MyProfile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-4 sm:py-6 lg:py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen  py-2 sm:py-3 lg:py-4">
+      <div className=" mx-auto px-3 sm:px-4 lg:px-6">
         <StudentHeader />
         <StudentContent />
       </div>

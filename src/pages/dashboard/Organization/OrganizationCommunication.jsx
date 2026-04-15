@@ -23,6 +23,7 @@ import {
   X,
   FileText,
 } from 'lucide-react';
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -333,7 +334,7 @@ const OrganizationCommunication = () => {
       joinConversation(selectedConversation._id);
 
       if (isMobile) {
-        setMobileView("chat");
+        setMobileView('chat');
       }
     }
   }, [selectedConversation, isMobile]);
@@ -376,6 +377,9 @@ const OrganizationCommunication = () => {
       const conversation = response.data;
 
       setSelectedConversation(conversation);
+      if (isMobile) {
+        setMobileView('chat');
+      }
       setShowNewChat(false);
       setSearchTerm("");
       setActiveTab("chats");
@@ -673,61 +677,61 @@ const OrganizationCommunication = () => {
     : false;
 
   return (
-    <div className="h-full bg-gray-50">
-      <div className="flex h-full max-w-7xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-        {/* Sidebar - Fixed */}
+    <div className="h-full w-full bg-gradient-to-br from-gray-50 to-blue-50/30">
+      <div className="flex h-full max-h-[calc(100vh-130px)] w-full overflow-hidden rounded-2xl border border-slate-200 bg-white/95 shadow-sm backdrop-blur-sm">
+        {/* Sidebar - Responsive */}
         <div className={`
-          ${sidebarOpen ? 'w-80' : 'w-20'} 
-          flex-shrink-0 border-r border-gray-200 bg-white 
+          ${sidebarOpen ? 'w-80 lg:w-72' : 'w-20'} 
+          border-r border-slate-200 bg-white/98 backdrop-blur-xl shadow-lg lg:shadow-none
           transition-all duration-300 ease-in-out
           ${isMobile && mobileView === 'chat' ? 'hidden' : 'flex flex-col'}
         `}>
           {/* Sidebar Header - Fixed */}
-          <div className="p-4 border-b border-gray-200 bg-white flex-shrink-0">
+          <div className="p-3 lg:p-4 border-b border-slate-200/70 bg-white/50 backdrop-blur-sm flex-shrink-0">
             <div className="flex items-center justify-between">
               {sidebarOpen ? (
                 <>
                   <div className="flex items-center gap-2">
-                    <h2 className="text-xl font-bold text-gray-900">Communication</h2>
+                    <h2 className="text-lg lg:text-xl font-bold text-slate-900">Messages</h2>
                     <div className="flex items-center gap-1 text-xs">
-                      <div className={`w-2 h-2 rounded-full ${socketConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                      <span className={socketConnected ? 'text-green-600' : 'text-red-600'}>
-                        {socketConnected ? '' : 'Offline'}
+                      <div className={`w-2 h-2 rounded-full ${socketConnected ? 'bg-emerald-500' : 'bg-slate-400'}`}></div>
+                      <span className={socketConnected ? 'text-emerald-600 hidden sm:inline' : 'text-slate-500 hidden sm:inline'}>
+                        {socketConnected ? 'Connected' : 'Offline'}
                       </span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={() => setShowNewChat(true)}
-                      className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white p-2 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+                      className="bg-gradient-to-r from-sky-500 to-blue-500 text-white p-2 rounded-xl shadow-md hover:shadow-lg transition-all duration-200"
                     >
                       <Plus className="w-4 h-4" />
                     </motion.button>
                     <button
                       onClick={() => setSidebarOpen(false)}
-                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                      className="p-2 hover:bg-slate-100 rounded-lg transition-colors lg:hidden"
                     >
-                      <ChevronLeft className="w-5 h-5 text-gray-600" />
+                      <ChevronLeft className="w-5 h-5 text-slate-600" />
                     </button>
                   </div>
                 </>
               ) : (
-                <div className="flex items-center gap-2 mx-auto">
+                <div className="flex items-center justify-center gap-2 mx-auto w-full">
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => setShowNewChat(true)}
-                    className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white p-2 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+                    className="bg-gradient-to-r from-sky-500 to-blue-500 text-white p-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
                   >
                     <Plus className="w-4 h-4" />
                   </motion.button>
                   <button
                     onClick={() => setSidebarOpen(true)}
-                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
                   >
-                    <Menu className="w-5 h-5 text-gray-600" />
+                    <Menu className="w-5 h-5 text-slate-600" />
                   </button>
                 </div>
               )}
@@ -736,66 +740,73 @@ const OrganizationCommunication = () => {
             {sidebarOpen && (
               <>
                 {/* Tabs */}
-                <div className="flex space-x-1 bg-gray-100 p-1 rounded-xl mt-4">
+                <div className="grid grid-cols-3 gap-1 bg-slate-100/60 p-1 rounded-2xl mt-3 mx-0.5">
                   <button
                     onClick={() => setActiveTab('chats')}
-                    className={`flex-1 py-2 px-3 text-sm font-medium rounded-lg transition-all duration-200 ${
+                    aria-label="Chats"
+                    title="Chats"
+                    className={`relative min-w-0 py-1.5 lg:py-2 px-1.5 lg:px-3 text-xs lg:text-sm font-medium rounded-lg lg:rounded-xl transition-all duration-200 ${
                       activeTab === 'chats'
-                        ? 'bg-white text-blue-600 shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900'
+                        ? 'bg-white text-sky-600 shadow-sm border border-sky-200/50'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/40'
                     }`}
                   >
-                    <div className="flex items-center justify-center gap-2">
-                      <MessageCircle className="w-4 h-4" />
-                      Chats
+                    <div className="flex items-center justify-center gap-0.5 lg:gap-1 whitespace-nowrap">
+                      <MessageCircle className="w-3 h-3 lg:w-4 lg:h-4 flex-shrink-0" />
                     </div>
                   </button>
                   <button
                     onClick={() => setActiveTab('members')}
-                    className={`flex-1 py-2 px-3 text-sm font-medium rounded-lg transition-all duration-200 ${
+                    aria-label="Members"
+                    title="Members"
+                    className={`relative min-w-0 py-1.5 lg:py-2 px-1.5 lg:px-3 text-xs lg:text-sm font-medium rounded-lg lg:rounded-xl transition-all duration-200 ${
                       activeTab === 'members'
-                        ? 'bg-white text-blue-600 shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900'
+                        ? 'bg-white text-sky-600 shadow-sm border border-sky-200/50'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/40'
                     }`}
                   >
-                    <div className="flex items-center justify-center gap-2">
-                      <Users className="w-4 h-4" />
-                      Members
-                      <span className="bg-blue-100 text-blue-600 text-xs px-1.5 py-0.5 rounded-full">
-                        {organizationMembers.length}
+                    <div className="flex items-center justify-center gap-0.5 lg:gap-1 whitespace-nowrap">
+                      <span className="relative inline-flex">
+                        <Users className="w-3 h-3 lg:w-4 lg:h-4 flex-shrink-0" />
+                        {organizationMembers.length > 0 && (
+                          <span className="absolute -top-1.5 -right-2 min-w-[14px] h-[14px] px-1 rounded-full bg-emerald-500 text-white text-[9px] leading-[14px] text-center shadow-sm">
+                            {organizationMembers.length}
+                          </span>
+                        )}
                       </span>
                     </div>
                   </button>
                   <button
                     onClick={() => setActiveTab('organizations')}
-                    className={`flex-1 py-2 px-3 text-sm font-medium rounded-lg transition-all duration-200 ${
+                    aria-label="Organizations"
+                    title="Organizations"
+                    className={`relative min-w-0 py-1.5 lg:py-2 px-1.5 lg:px-3 text-xs lg:text-sm font-medium rounded-lg lg:rounded-xl transition-all duration-200 ${
                       activeTab === 'organizations'
-                        ? 'bg-white text-blue-600 shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900'
+                        ? 'bg-white text-sky-600 shadow-sm border border-sky-200/50'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/40'
                     }`}
                   >
-                    <div className="flex items-center justify-center gap-2">
-                      <Building2 className="w-4 h-4" />
-                      Orgs
+                    <div className="flex items-center justify-center gap-0.5 lg:gap-1 whitespace-nowrap">
+                      <Building2 className="w-3 h-3 lg:w-4 lg:h-4 flex-shrink-0" />
                     </div>
                   </button>
                 </div>
 
                 {/* Search Bar */}
-                <div className="mt-3 relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <div className="mt-3 px-0.5 relative">
+                  <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
                   <input
                     type="text"
                     placeholder={
                       activeTab === 'chats' 
-                        ? "Search conversations..." 
+                        ? "Search..." 
                         : activeTab === 'members'
-                        ? "Search members..."
-                        : "Search organizations..."
+                        ? "Find members..."
+                        : "Find orgs..."
                     }
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200 text-sm"
+                    className="w-full pl-9 pr-3 py-2 text-sm bg-slate-100/60 border border-slate-200/70 rounded-xl focus:ring-2 focus:ring-sky-400 focus:border-sky-400 outline-none transition-all duration-200"
                   />
                 </div>
               </>
@@ -830,7 +841,9 @@ const OrganizationCommunication = () => {
                               );
                               setSelectedConversation({ ...conversation, unreadCount: 0 });
                               setMessageSearchTerm('');
-                              if (isMobile) setMobileView('chat');
+                              if (isMobile) {
+                                setMobileView('chat');
+                              }
                             }}
                             className={`p-3 border-b border-gray-100 cursor-pointer transition-all duration-200 group ${
                               selectedConversation?._id === conversation._id
@@ -941,7 +954,24 @@ const OrganizationCommunication = () => {
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: index * 0.05 }}
-                            className="p-3 border-b border-gray-100 hover:bg-gray-50 transition-all duration-200 group"
+                            onClick={() => {
+                              if (existingConv) {
+                                setSelectedConversation(existingConv);
+                                if (isMobile) {
+                                  setMobileView('chat');
+                                }
+                              } else {
+                                const student = {
+                                  _id: member.studentId,
+                                  name: member.studentName,
+                                  email: member.studentEmail,
+                                  photoURL: member.studentPhoto,
+                                  meta: member.studentInfo,
+                                };
+                                startNewChat(student);
+                              }
+                            }}
+                            className="p-3 border-b border-gray-100 hover:bg-gray-50 transition-all duration-200 group cursor-pointer"
                           >
                             <div className="flex items-center space-x-3">
                               <img
@@ -983,10 +1013,13 @@ const OrganizationCommunication = () => {
                                   <motion.button
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
-                                    onClick={() => {
+                                    onClick={(e) => {
+                                      e.stopPropagation();
                                       if (existingConv) {
                                         setSelectedConversation(existingConv);
-                                        if (isMobile) setMobileView('chat');
+                                        if (isMobile) {
+                                          setMobileView('chat');
+                                        }
                                       } else {
                                         // Create student object to start chat
                                         const student = {
@@ -1056,7 +1089,17 @@ const OrganizationCommunication = () => {
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: index * 0.05 }}
-                            className="p-3 border-b border-gray-100 hover:bg-gray-50 transition-all duration-200 group"
+                            onClick={() => {
+                              if (existingConv) {
+                                setSelectedConversation(existingConv);
+                                if (isMobile) {
+                                  setMobileView('chat');
+                                }
+                              } else {
+                                startNewChat(org);
+                              }
+                            }}
+                            className="p-3 border-b border-gray-100 hover:bg-gray-50 transition-all duration-200 group cursor-pointer"
                           >
                             <div className="flex items-center space-x-3">
                               <img
@@ -1098,10 +1141,13 @@ const OrganizationCommunication = () => {
                                   <motion.button
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
-                                    onClick={() => {
+                                    onClick={(e) => {
+                                      e.stopPropagation();
                                       if (existingConv) {
                                         setSelectedConversation(existingConv);
-                                        if (isMobile) setMobileView('chat');
+                                        if (isMobile) {
+                                          setMobileView('chat');
+                                        }
                                       } else {
                                         startNewChat(org);
                                       }
@@ -1176,96 +1222,71 @@ const OrganizationCommunication = () => {
           </div>
         </div>
 
-        {/* Chat Area - Flexible */}
+        {/* Chat Area - Responsive */}
         <div className={`
-          flex-1 flex flex-col
+          flex-1 flex flex-col min-w-0 bg-white/50 backdrop-blur-sm
           ${isMobile && mobileView === 'sidebar' ? 'hidden' : 'flex'}
         `}>
           {selectedConversation ? (
             <>
               {/* Chat Header - Fixed */}
-              <div className="p-4 border-b border-gray-200 bg-white flex-shrink-0">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
+              <div className="p-3 lg:p-4 border-b border-slate-200/70 bg-white/50 backdrop-blur-sm flex-shrink-0 sticky top-0 z-30">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 lg:gap-3 min-w-0">
                     {isMobile && (
                       <button
-                        onClick={() => setMobileView('sidebar')}
-                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors mr-2"
+                        onClick={() => {
+                          setMobileView('sidebar');
+                        }}
+                        className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors flex-shrink-0"
                       >
-                        <ChevronLeft className="w-5 h-5 text-gray-600" />
+                        <ChevronLeft className="w-5 h-5 text-slate-600" />
                       </button>
                     )}
                     <img
                       src={selectedOtherParticipant?.photo || `https://ui-avatars.com/api/?name=${selectedOtherParticipant?.name || "User"}&background=4bbeff&color=fff`}
                       alt={selectedOtherParticipant?.name || "User"}
-                      className="w-10 h-10 rounded-xl object-cover"
+                      className="w-9 h-9 lg:w-10 lg:h-10 rounded-lg object-cover flex-shrink-0"
                     />
-                    <div>
-                      <h3 className="font-semibold text-gray-900 text-sm">
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-slate-900 text-sm truncate">
                         {selectedOtherParticipant?.name || "Unknown User"}
                       </h3>
-                      <div className="flex items-center gap-3 text-xs text-gray-600">
-                        {selectedOtherParticipant?.meta?.studentId ? (
-                          <>
-                            <div className="flex items-center gap-1">
-                              <User className="w-3 h-3" />
-                              <span>ID: {selectedOtherParticipant.meta.studentId}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <GraduationCap className="w-3 h-3" />
-                              <span>{selectedOtherParticipant.meta.department}</span>
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            <div className="flex items-center gap-1">
-                              <Building2 className="w-3 h-3" />
-                              <span>{selectedOtherParticipant?.meta?.type || selectedOtherParticipant?.role}</span>
-                            </div>
-                            {selectedOtherParticipant?.meta?.campus && (
-                              <div className="flex items-center gap-1">
-                                <MapPin className="w-3 h-3" />
-                                <span>{selectedOtherParticipant.meta.campus}</span>
-                              </div>
-                            )}
-                          </>
-                        )}
+                      <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${selectedIsOnline ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
+                        <span className="truncate">
+                          {selectedIsOnline ? 'Active now' : 'Away'}
+                        </span>
                       </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="flex items-center gap-2 text-xs justify-end mb-1">
-                      <div className={`w-2 h-2 rounded-full ${socketConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                      <span className={socketConnected ? 'text-green-600' : 'text-red-600'}>
-                        {socketConnected ? 'Connected' : 'Disconnected'}
-                      </span>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <div className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 ${socketConnected ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
+                      <div className={`w-1.5 h-1.5 rounded-full ${socketConnected ? 'bg-emerald-500' : 'bg-slate-400'}`}></div>
+                      <span className="hidden sm:inline text-[11px]">{socketConnected ? 'Connected' : 'Connecting'}</span>
                     </div>
-                    <div className={`w-2 h-2 rounded-full ${selectedIsOnline ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`}></div>
-                    <p className={`text-xs mt-1 ${selectedIsOnline ? 'text-green-600' : 'text-gray-500'}`}>
-                      {selectedIsOnline ? 'Online' : 'Offline'}
-                    </p>
                   </div>
                 </div>
                 {Object.keys(typingUsers).length > 0 && (
-                  <p className="text-xs text-sky-600 mt-2 ml-13">
+                  <p className="text-xs text-sky-600 mt-2">
                     {Object.values(typingUsers)[0]} is typing...
                   </p>
                 )}
-                <div className="mt-3 relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <div className="mt-2.5 lg:mt-3 relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5" />
                   <input
                     type="text"
                     value={messageSearchTerm}
                     onChange={(e) => setMessageSearchTerm(e.target.value)}
-                    placeholder="Search in this conversation..."
-                    className="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    placeholder="Search messages..."
+                    className="w-full pl-8 pr-3 py-1.5 lg:py-2 text-xs lg:text-sm bg-slate-100/60 border border-slate-200/70 rounded-lg focus:ring-2 focus:ring-sky-400 focus:border-sky-400 outline-none"
                   />
                 </div>
               </div>
 
               {/* Messages Area - Scrollable */}
-              <div className="flex-1 overflow-y-auto bg-gray-50/50 p-4">
-                <div className="space-y-3 max-w-4xl mx-auto">
+              <div className="flex-1 min-h-0 overflow-y-auto bg-gradient-to-br from-white via-slate-50 to-blue-50/20 p-3 lg:p-4">
+                <div className="space-y-2 lg:space-y-3 max-w-3xl">
                   {filteredConversationMessages.map((message, index) => {
                     const isOwnMessage = String(message.senderId) === String(currentUserObjectId);
                     const previousMessage = filteredConversationMessages[index - 1];
@@ -1287,30 +1308,30 @@ const OrganizationCommunication = () => {
                     return (
                       <React.Fragment key={message._id || index}>
                         {unreadDividerIndex === index && (
-                          <div className="flex items-center gap-3 py-2">
-                            <div className="h-px bg-red-200 flex-1" />
-                            <span className="text-[11px] px-2 py-0.5 rounded-full bg-red-50 text-red-600 font-medium">
+                          <div className="flex items-center gap-2 py-2">
+                            <div className="h-px bg-amber-200/70 flex-1" />
+                            <span className="text-[10px] lg:text-[11px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 font-medium">
                               New messages
                             </span>
-                            <div className="h-px bg-red-200 flex-1" />
+                            <div className="h-px bg-amber-200/70 flex-1" />
                           </div>
                         )}
 
                         {showDateDivider && (
                           <div className="flex items-center justify-center py-2">
-                            <span className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-500">
+                            <span className="text-[10px] lg:text-[11px] font-medium px-2.5 py-1 rounded-full bg-slate-100/80 text-slate-500">
                               {formatDateLabel(currentTimestamp)}
                             </span>
                           </div>
                         )}
 
                         <motion.div
-                          initial={{ opacity: 0, y: 10 }}
+                          initial={{ opacity: 0, y: 8 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} items-end gap-2`}
+                          className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} items-end gap-1 lg:gap-2`}
                         >
                           {!isOwnMessage && (
-                            <div className="w-7">
+                            <div className="w-6 lg:w-7">
                               {showAvatar ? (
                                 <img
                                   src={selectedOtherParticipant?.photo || `https://ui-avatars.com/api/?name=${selectedOtherParticipant?.name || "User"}&background=4bbeff&color=fff`}
@@ -1385,27 +1406,27 @@ const OrganizationCommunication = () => {
                 )}
               </div>
 
-              {/* Message Input - Fixed */}
-              <div className="p-4 border-t border-gray-200 bg-white flex-shrink-0">
-                <div className="max-w-4xl mx-auto space-y-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs text-gray-500 inline-flex items-center gap-1">
-                      <Smile className="w-3.5 h-3.5" />
-                      Quick reply
+              {/* Message Input - Fixed & Mobile-Safe */}
+              <div className="p-2.5 lg:p-4 border-t border-slate-200/70 bg-white/50 backdrop-blur-sm flex-shrink-0 sticky bottom-0 z-20">
+                <div className="space-y-2 lg:space-y-2.5">
+                  <div className="flex items-center gap-1.5 lg:gap-2 flex-wrap">
+                    <span className="text-[10px] lg:text-xs text-slate-500 inline-flex items-center gap-1 flex-shrink-0">
+                      <Smile className="w-3 h-3 lg:w-3.5 lg:h-3.5" />
+                      <span className="hidden sm:inline">Quick</span>
                     </span>
-                    {QUICK_REPLIES.map((reply) => (
+                    {QUICK_REPLIES.slice(0, 2).map((reply) => (
                       <button
                         key={reply}
                         type="button"
                         onClick={() => handleTyping(reply)}
-                        className="text-xs px-2.5 py-1 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700"
+                        className="text-[10px] lg:text-xs px-2 lg:px-2.5 py-0.5 lg:py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
                       >
-                        {reply}
+                        {reply.length > 12 ? reply.substring(0, 12) + '...' : reply}
                       </button>
                     ))}
                   </div>
 
-                  <form onSubmit={sendMessage} className="flex space-x-3">
+                  <form onSubmit={sendMessage} className="flex items-end gap-2 lg:gap-3">
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -1417,9 +1438,10 @@ const OrganizationCommunication = () => {
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
                       disabled={uploadingAttachment}
-                      className="self-end p-3 rounded-xl border border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-600 disabled:opacity-50"
+                      className="p-2 lg:p-2.5 rounded-lg border border-slate-200/70 bg-slate-100/60 hover:bg-slate-100 text-slate-600 disabled:opacity-50 transition-colors flex-shrink-0"
+                      aria-label="Attach file"
                     >
-                      <Paperclip className="w-4 h-4" />
+                      <Paperclip className="w-4 h-4 lg:w-4.5 lg:h-4.5" />
                     </button>
 
                     <textarea
@@ -1428,27 +1450,28 @@ const OrganizationCommunication = () => {
                       onChange={(e) => handleTyping(e.target.value)}
                       onKeyDown={handleComposerKeyDown}
                       rows={2}
-                      placeholder="Type a message... (Enter to send, Shift+Enter for new line)"
-                      className="flex-1 px-4 py-3 resize-none bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200 text-sm"
+                      placeholder="Message..."
+                      className="flex-1 px-3 lg:px-4 py-2 lg:py-2.5 resize-none bg-slate-100/60 border border-slate-200/70 rounded-lg focus:ring-2 focus:ring-sky-400 focus:border-sky-400 outline-none transition-all duration-200 text-sm"
                     />
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       type="submit"
                       disabled={(!newMessage.trim() && !attachmentMeta) || !socketConnected || isSending || uploadingAttachment}
-                      className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white p-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 self-end"
+                      className="bg-gradient-to-r from-sky-500 to-blue-500 text-white p-2 lg:p-2.5 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                      aria-label="Send message"
                     >
-                      <Send className="w-4 h-4" />
+                      <Send className="w-4 h-4 lg:w-4.5 lg:h-4.5" />
                     </motion.button>
                   </form>
 
                   {(attachmentFile || uploadingAttachment) && (
-                    <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <FileText className="w-4 h-4 text-gray-500" />
+                    <div className="rounded-lg border border-slate-200/70 bg-slate-100/40 px-2.5 lg:px-3 py-1.5 lg:py-2 flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5 lg:gap-2 min-w-0">
+                        <FileText className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-slate-500 flex-shrink-0" />
                         <span className="truncate">
                           {uploadingAttachment
-                            ? 'Uploading attachment...'
+                            ? 'Uploading...'
                             : attachmentFile?.name || attachmentMeta?.name}
                         </span>
                       </div>
@@ -1456,9 +1479,9 @@ const OrganizationCommunication = () => {
                         <button
                           type="button"
                           onClick={removeAttachment}
-                          className="text-gray-500 hover:text-gray-700"
+                          className="text-slate-500 hover:text-slate-700 ml-2 flex-shrink-0"
                         >
-                          <X className="w-4 h-4" />
+                          <X className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
                         </button>
                       )}
                     </div>

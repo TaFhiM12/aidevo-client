@@ -55,7 +55,7 @@ const RecommendationPage = () => {
   const studentIdentifier = userInfo?.uid || userInfo?._id || userInfo?.studentId;
 
   return (
-    <div className="min-h-full bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50 p-2 md:p-4 rounded-2xl">
+    <div className="min-h-full  p-2 md:p-4 rounded-2xl">
       <motion.div
         key={refreshKey}
         initial={{ opacity: 0, y: 20 }}
