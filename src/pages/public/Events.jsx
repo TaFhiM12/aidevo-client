@@ -227,10 +227,8 @@ const Events = () => {
   useEffect(() => {
     const parsedPage = Number.parseInt(searchParams.get("page") || "1", 10);
     const pageFromUrl = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
-    if (pageFromUrl !== currentPage) {
-      setCurrentPage(pageFromUrl);
-    }
-  }, [searchParams, currentPage]);
+    setCurrentPage((prevPage) => (prevPage === pageFromUrl ? prevPage : pageFromUrl));
+  }, [searchParams]);
 
   const totalPages = Math.max(1, Math.ceil(sortedEvents.length / ITEMS_PER_PAGE));
   useEffect(() => {
@@ -337,10 +335,8 @@ const Events = () => {
 
   const EventCard = ({ event }) => (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -5 }}
-      className="app-surface overflow-hidden group cursor-pointer transition-all duration-300 hover:shadow-md flex flex-col h-full min-h-[540px]"
+      className="app-surface overflow-hidden group cursor-pointer transition-shadow duration-200 hover:shadow-md flex flex-col h-full min-h-[540px]"
     >
       {/* Event Image */}
       <div className="relative h-48 overflow-hidden">
@@ -852,18 +848,11 @@ const Events = () => {
             </motion.div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <AnimatePresence>
-                {paginatedEvents.map((event, index) => (
-                  <motion.div
-                    key={event._id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                  >
-                    <EventCard event={event} />
-                  </motion.div>
-                ))}
-              </AnimatePresence>
+              {paginatedEvents.map((event) => (
+                <div key={event._id}>
+                  <EventCard event={event} />
+                </div>
+              ))}
             </div>
           )}
 

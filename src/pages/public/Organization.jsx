@@ -199,10 +199,8 @@ const Organization = () => {
   useEffect(() => {
     const parsedPage = Number.parseInt(searchParams.get('page') || '1', 10);
     const pageFromUrl = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
-    if (pageFromUrl !== currentPage) {
-      setCurrentPage(pageFromUrl);
-    }
-  }, [searchParams, currentPage]);
+    setCurrentPage((prevPage) => (prevPage === pageFromUrl ? prevPage : pageFromUrl));
+  }, [searchParams]);
 
   const totalPages = Math.max(
     1,
@@ -733,7 +731,6 @@ const Organization = () => {
 
         {/* Organizations Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <AnimatePresence>
             {paginatedOrganizations.map((organization) => {
               const buttonConfig = getButtonConfig(organization);
               const recruitmentStatus = getRecruitmentStatus(organization);
@@ -743,7 +740,7 @@ const Organization = () => {
               return (
                 <div
                   key={organization._id}
-                  className="app-surface overflow-hidden hover:shadow-md transition-all duration-300 relative flex flex-col h-full min-h-[610px]"
+                  className="app-surface overflow-hidden hover:shadow-md transition-shadow duration-200 relative flex flex-col h-full min-h-[610px]"
                 >
                   <button
                     type="button"
@@ -911,7 +908,6 @@ const Organization = () => {
                 </div>
               );
             })}
-          </AnimatePresence>
         </div>
 
         {filteredOrganizations.length > 0 && (
